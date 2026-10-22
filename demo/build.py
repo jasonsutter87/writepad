@@ -2,16 +2,15 @@
 
     python demo/build.py <empty or new folder> [--zip out.zip]
 
-Builds the `writepad` CLI and demo/helper, downloads two reference EPUBs from
-Project Gutenberg, and writes every file through the same code the app uses,
-taking a history snapshot after each step.
+Builds the `writepad` CLI and demo/helper, then writes every file through the
+same code the app uses, taking a history snapshot after each step.
 """
 
 import json
 import shutil
 import subprocess
 import sys
-import urllib.request
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -20,8 +19,6 @@ SRC = HERE / "src"
 EXE = ".exe" if sys.platform == "win32" else ""
 CLI = ROOT / "target" / "release" / f"writepad{EXE}"
 HELP = ROOT / "target" / "release" / f"demo-helper{EXE}"
-BOOKS = {"Many Cargoes.epub": "https://www.gutenberg.org/ebooks/5758.epub3.images",
-         "Poe Tales.epub": "https://www.gutenberg.org/ebooks/2148.epub3.images"}
 args = sys.argv[1:]
 ZIP = None
 if "--zip" in args:
@@ -36,10 +33,12 @@ subprocess.run(["cargo", "build", "--release", "-p", "writepad-cli"], cwd=ROOT, 
 subprocess.run(["cargo", "build", "--release", "--manifest-path", str(HERE / "helper" / "Cargo.toml"), "--target-dir", str(ROOT / "target")], check=True)
 MS = "The Monkey's Paw"
 SP = "The Monkey's Paw (screenplay)"
+SX = "The Sexton's Bell"
+TR = "Trifles (table read)"
 
 
-def cli(tool, args, agent=None):
-    cmd = [str(CLI), "--vault", str(V)]
+def cli(tool, args, agent=None, vault=None):
+    cmd = [str(CLI), "--vault", str(vault or V)]
     if agent is not None:
         cmd += ["--agent", agent]
     out = subprocess.run(cmd + ["call", tool, json.dumps(args)], capture_output=True, text=True, encoding="utf-8")
@@ -211,28 +210,76 @@ lex = {"Laburnam": "luh-BUR-num", "Meggins": "MEG-inz", "fakir": "fuh-KEER", "an
 (V / ".writepad" / "lexicon.json").write_text(json.dumps(lex, indent=2), encoding="utf-8")
 helper("snapshot", "Screenplay draft 1, cast for the table read, pronunciations")
 
-# 7. Library: reference books measured into numbers, a target blend, and the script.
+# 7. Library: three stories measured into numbers and blended into a target,
+#    and the screenplay lined up against the story it adapts.
 lib = V / "library"
 lib.mkdir(exist_ok=True)
 cli("export", {"manuscript": ms_id, "format": "epub", "path": str(lib / "The Monkey's Paw.epub"), "author": "W. W. Jacobs"})
+with tempfile.TemporaryDirectory() as tmp:  # the other two only pass through a vault on the way to EPUB
+    for title, author in [("The Signal-Man", "Charles Dickens"), ("The Tell-Tale Heart", "Edgar Allan Poe")]:
+        mid = cli("import", {"title": title, "paths": [str(SRC / "library" / f"{title}.md")]}, vault=tmp)["manuscript"]
+        cli("export", {"manuscript": mid, "format": "epub", "path": str(lib / f"{title}.epub"), "author": author}, vault=tmp)
+books = {}
+for title, author in [(MS, "W. W. Jacobs"), ("The Signal-Man", "Charles Dickens"), ("The Tell-Tale Heart", "Edgar Allan Poe")]:
+    books[title] = cli("library_add", {"path": str(lib / f"{title}.epub"), "title": title, "author": author})
+helper("weights", json.dumps({books[MS]["id"]: 40, books["The Signal-Man"]["id"]: 30, books["The Tell-Tale Heart"]["id"]: 30}))
 screenplay = (SRC / "Draft 1.md").read_text(encoding="utf-8")
 fountain = "\n".join(l for l in screenplay.splitlines() if not l.startswith("## ")).lstrip("\n")
 (lib / "The Monkey's Paw.fountain").write_text(fountain + "\n", encoding="utf-8", newline="\n")
-books = {}
-for f, title, author in [("The Monkey's Paw.epub", MS, "W. W. Jacobs"), ("Many Cargoes.epub", "Many Cargoes", "W. W. Jacobs"), ("Poe Tales.epub", None, "Edgar Allan Poe")]:
-    if f in BOOKS:
-        req = urllib.request.Request(BOOKS[f], headers={"User-Agent": "WRITEpad demo build"})
-        with urllib.request.urlopen(req) as r, open(lib / f, "wb") as out:
-            shutil.copyfileobj(r, out)
-    args = {"path": str(lib / f), "author": author}
-    if title:
-        args["title"] = title
-    books[f] = cli("library_add", args)
 script = cli("script_add", {"source": str(lib / "The Monkey's Paw.fountain"), "title": SP, "writer": "WRITEpad demo"})
-helper("weights", json.dumps({b["id"]: w for b, w in [(books["Many Cargoes.epub"], 60), (books["Poe Tales.epub"], 40)]}))
 for lock in V.rglob("*.lock"):
     lock.unlink()
-helper("snapshot", "Library: Jacobs and Poe measured, 60/40 target, screenplay added")
+helper("snapshot", "Library: Jacobs, Dickens and Poe blended 40/30/30; screenplay added")
+
+# 8. An original story written toward that target: a draft, then a revision
+#    that closes the gaps Compare showed. Its own small world.
+sx_id = cli("import", {"title": SX, "paths": [str(SRC / "sexton" / "Draft 1.md")]})["manuscript"]
+helper("snapshot", "The Sexton's Bell: draft 1, written without looking at the numbers")
+sx = json.loads((V / ".writepad" / "manuscripts" / sx_id / "manuscript.json").read_text(encoding="utf-8"))
+revised = (SRC / "sexton" / "Revised toward target.md").read_text(encoding="utf-8")
+for b in sx["blocks"]:
+    if b.get("raw"):
+        continue
+    text = revised.split(f"## {b['title']}\n\n", 1)[1].split("\n## ", 1)[0].rstrip() + "\n"
+    take = cli("fork", {"manuscript": sx_id, "block": b["id"], "label": "Revised toward target", "text": text}, agent="")["take"]
+    helper("set-live", sx_id, take)
+note("world/The Sexton's Bell.md", fm(type="world", manuscripts=[SX]) + """
+# The Sexton's Bell
+
+A churchyard on the edge of a railway cutting, some time in the 1880s. Graves in the bell-row have "safety coffin" bells: a cord from the dead man's hand to a bell above ground, in case he wakes.
+
+Written toward the Library's 40/30/30 target.
+""")
+for name, kind, aliases, body in [
+    ("Tom", "character", ["Tom"], "The narrator. Under-sexton at nineteen, sexton for forty years after. Keeps his promise to [[Mrs. Fenn]]."),
+    ("Abel Crane", "character", ["Abel", "Crane"], "Sexton of [[St. Aldric's]] for thirty years. Tied off every cord in [[The bell-row]] so the trains wouldn't wake him."),
+    ("Mrs. Fenn", "character", ["Mrs. Fenn"], "The corn-chandler's widow. Pays in gold for a promise: \"If it rings, you will go to him.\""),
+    ("St. Aldric's", "location", ["St. Aldric's"], "A churchyard along the top of a railway cutting. The goods train passes at twenty to twelve."),
+    ("The bell-row", "location", ["bell-row"], "Twelve graves on the north wall with bells instead of stones. Then thirteen."),
+]:
+    note(f"world/{'characters' if kind == 'character' else 'locations'}/{name}.md", fm(type=kind, aliases=aliases) + f"# {name}\n\n{body}\n")
+for name, after, scenes, body in [
+    ("Fenn is buried with a bell", None, ["The bell-row"], "[[Tom]] promises [[Mrs. Fenn]] he will go to her husband if the bell rings."),
+    ("Abel ties off Fenn's cord", "Fenn is buried with a bell", ["The quiet night"], "[[Abel Crane]] with his arm down the pipe. \"Rat in the pipe.\""),
+    ("The bell rings with no train", "Abel ties off Fenn's cord", ["The quiet night"], "Snow closes the line. On the third night the twelfth bell rings."),
+    ("Tom opens the grave", "The bell rings with no train", ["The cord"], "The knot is untied, held loose in Fenn's fingers."),
+    ("Abel is buried in the bell-row", "Tom opens the grave", ["The cord"], "[[Tom]] threads the cord and does not tie it off."),
+]:
+    props = {"type": "event"}
+    if after:
+        props["after"] = f"[[{after}]]"
+    props["when"] = "1880s, winter"
+    props["scenes"] = [f"[[{SX}#{x}]]" for x in scenes]
+    note(f"world/timeline/{name}.md", fm(**props) + body + "\n")
+note("notes/Writing toward a target.md", (SRC / "notes" / "Writing toward a target.md").read_text(encoding="utf-8"))
+helper("snapshot", "The Sexton's Bell: revised toward the 40/30/30 target, with its world")
+
+# 9. A public-domain play laid out as Fountain: five voices for a table read.
+tr_id = cli("import", {"title": TR, "paths": [str(SRC / "Trifles.md")]})["manuscript"]
+cast[f"ms:{tr_id}"] = {"__narrator": "af_heart", "COUNTY ATTORNEY": "am_adam", "SHERIFF": "am_eric", "HALE": "am_fenrir",
+                        "MRS PETERS": "af_sarah", "MRS HALE": "af_bella"}
+(V / ".writepad" / "cast.json").write_text(json.dumps(cast, indent=2), encoding="utf-8")
+helper("snapshot", "Trifles (Glaspell, 1916) as a five-voice table read")
 
 for lock in V.rglob("*.lock"):
     lock.unlink()
@@ -241,4 +288,4 @@ if ZIP:
     print("zip:", ZIP)
 print("vault:", V)
 print("manuscript:", ms_id, "screenplay:", sp_id)
-print("books:", {k: v["id"] for k, v in books.items()}, "script:", script["id"])
+print("books:", {k: v["id"] for k, v in books.items()}, "script:", script["id"], "sexton:", sx_id, "trifles:", tr_id)
