@@ -1,6 +1,6 @@
 [package]
 name = "writepad-app"
-version = "0.1.2"
+version = "0.1.3"
 description = "WRITEpad: a writing desk with onion-skinned drafts and local narration"
 edition = "2021"
 

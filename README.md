@@ -16,6 +16,10 @@ Narration needs Python 3.10+; press Listen and choose **Set up narration**, and
 WRITEpad installs Kokoro and downloads the voices itself. Everything else works
 out of the box.
 
+**Try the demo vault.** *WRITEpad-Demo-Vault.zip* on the Releases page is a
+tour of every feature, built around *The Monkey's Paw* (public domain). Unzip
+it, open the folder in Settings, and read *Start here*. See [demo/](demo/).
+
 To cut a release: bump `version` in `src-tauri/tauri.conf.json`, then
 `git tag v0.1.1 && git push --tags`. The **Release** workflow builds all three
 and publishes them.
@@ -133,7 +137,9 @@ line up as versions).
 ## Library and cadence
 
 **Library** measures books you want to learn from. Add EPUBs; WRITEpad keeps
-only numbers (`.writepad/library/<book>.json`), never the text:
+only numbers (`.writepad/library/<book>.json`), never the text. Books and scripts
+kept inside the vault are remembered by vault-relative path, so a shared vault
+still finds them:
 
 - chapter, sentence and paragraph lengths as distributions, not just averages
 - dialogue share, one-sentence paragraphs, -ly adverbs, repeated sentence
