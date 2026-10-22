@@ -492,11 +492,31 @@ pub fn get(vault: &Path, id: &str) -> Option<Profile> {
 /// Measure an EPUB into the library (replacing an earlier measurement of it).
 /// `title` and `author` override what the file says (scans often say nothing).
 pub fn add(vault: &Path, path: &str, title: Option<&str>, author: Option<&str>) -> Result<Profile, String> {
-    let p = profile_epub(path, title, author)?;
+    let mut p = profile_epub(path, title, author)?;
+    p.source = store_source(vault, path);
     fs::create_dir_all(dir(vault)).map_err(|e| e.to_string())?;
     let json = serde_json::to_string_pretty(&p).map_err(|e| e.to_string())?;
     write_atomic(&dir(vault).join(format!("{}.json", p.id)), json.as_bytes())?;
     Ok(p)
+}
+
+/// How to remember a source: vault-relative (forward slashes) when the file is
+/// inside the vault, so a shared or moved vault still finds it; else as given.
+pub fn store_source(vault: &Path, source: &str) -> String {
+    let (Ok(file), Ok(root)) = (Path::new(source).canonicalize(), vault.canonicalize()) else { return source.into() };
+    match file.strip_prefix(&root) {
+        Ok(rel) => rel.components().map(|c| c.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/"),
+        Err(_) => source.into(),
+    }
+}
+
+/// A stored source as something to open: URLs and absolute paths as they are,
+/// vault-relative paths joined onto the vault.
+pub fn resolve_source(vault: &Path, source: &str) -> String {
+    if source.starts_with("http://") || source.starts_with("https://") || Path::new(source).is_absolute() {
+        return source.into();
+    }
+    vault.join(source).to_string_lossy().into_owned()
 }
 
 pub fn remove(vault: &Path, id: &str) -> Result<(), String> {
@@ -835,6 +855,23 @@ pub fn cadence(text: &str, target: Option<&Model>) -> Cadence {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sources_inside_the_vault_are_stored_relative() {
+        let vault = std::env::temp_dir().join(format!("wp-src-{}", std::process::id()));
+        fs::create_dir_all(vault.join("library")).unwrap();
+        let book = vault.join("library").join("A Book.epub");
+        fs::write(&book, b"x").unwrap();
+        let stored = store_source(&vault, &book.to_string_lossy());
+        assert_eq!(stored, "library/A Book.epub");
+        assert_eq!(Path::new(&resolve_source(&vault, &stored)).canonicalize().unwrap(), book.canonicalize().unwrap());
+        // Outside the vault, or a URL: kept as given.
+        let outside = std::env::temp_dir().join("elsewhere.epub").to_string_lossy().into_owned();
+        assert_eq!(store_source(&vault, &outside), outside);
+        assert_eq!(resolve_source(&vault, "https://imsdb.com/x.html"), "https://imsdb.com/x.html");
+        assert_eq!(resolve_source(&vault, &outside), outside);
+        fs::remove_dir_all(&vault).unwrap();
+    }
 
     #[test]
     fn splits_sentences_like_a_reader() {

@@ -1,0 +1,13 @@
+# Builds the demo vault's history, cuts and target: the parts the CLI doesn't expose.
+# Its own workspace, so it never builds with the app.
+[workspace]
+
+[package]
+name = "demo-helper"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+writepad-core = { path = "../../crates/core" }
+serde_json = "1"

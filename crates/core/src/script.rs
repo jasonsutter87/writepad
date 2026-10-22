@@ -491,7 +491,7 @@ pub fn add(vault: &Path, source: &str, title: Option<&str>, writer: Option<&str>
     }
     let title = title.map(str::to_string).unwrap_or_else(|| tidy_title(&found_title));
     let writer = writer.map(str::to_string).unwrap_or(found_writer);
-    let s = measure(&profile::slug(&title), &title, &writer, source, &els);
+    let s = measure(&profile::slug(&title), &title, &writer, &profile::store_source(vault, source), &els);
     fs::create_dir_all(dir(vault)).map_err(|e| e.to_string())?;
     write_atomic(&dir(vault).join(format!("{}.json", s.id)), serde_json::to_string_pretty(&s).unwrap().as_bytes())?;
     Ok(s)
@@ -532,7 +532,7 @@ pub fn fountain(els: &[Element]) -> String {
 /// script's text into the vault, unlike measuring it.
 pub fn open_as_manuscript(vault: &Path, id: &str) -> Result<String, String> {
     let s = get(vault, id)?;
-    let (els, _, _) = parse(&load_source(&s.source)?);
+    let (els, _, _) = parse(&load_source(&profile::resolve_source(vault, &s.source))?);
     let mut sections: Vec<(String, String)> = vec![];
     let mut chunk: Vec<Element> = vec![];
     let mut lines = 0usize;
@@ -683,8 +683,8 @@ fn scene_texts(els: &[Element]) -> Vec<SceneText> {
 pub fn adapt(vault: &Path, book_id: &str, script_id: &str) -> Result<Adaptation, String> {
     let book = profile::get(vault, book_id).ok_or(format!("No book {book_id:?} in the library."))?;
     let script = get(vault, script_id)?;
-    let (_, chapters, _) = profile::story_chapters(&book.source).map_err(|e| format!("Couldn't reread the book ({e}). Was the EPUB moved?"))?;
-    let (els, _, _) = parse(&load_source(&script.source)?);
+    let (_, chapters, _) = profile::story_chapters(&profile::resolve_source(vault, &book.source)).map_err(|e| format!("Couldn't reread the book ({e}). Was the EPUB moved?"))?;
+    let (els, _, _) = parse(&load_source(&profile::resolve_source(vault, &script.source))?);
     let scenes = scene_texts(&els);
 
     // Which chapter is each scene about? TF-IDF over chapters and scenes, then
