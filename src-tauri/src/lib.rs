@@ -487,6 +487,17 @@ fn delete_note(state: State<AppState>, path: String) -> Result<String, String> {
     world::delete_note(&state.vault()?, &path)
 }
 
+/// Move a whole manuscript to the trash (restorable with `restore_manuscript`).
+#[tauri::command]
+fn delete_manuscript(state: State<AppState>, id: String) -> Result<(), String> {
+    manuscript::trash_manuscript(&state.vault()?, &id)
+}
+
+#[tauri::command]
+fn restore_manuscript(state: State<AppState>, id: String) -> Result<(), String> {
+    manuscript::restore_manuscript(&state.vault()?, &id)
+}
+
 #[tauri::command]
 fn restore_note(state: State<AppState>, id: String) -> Result<String, String> {
     world::restore_note(&state.vault()?, &id)
@@ -608,6 +619,8 @@ pub fn run() {
             world_move_event,
             world_delete_event,
             delete_note,
+            delete_manuscript,
+            restore_manuscript,
             restore_note,
             library_report,
             library_add,

@@ -272,6 +272,31 @@ pub fn list(vault: &Path) -> Vec<ManuscriptInfo> {
     out
 }
 
+fn ms_trash(vault: &Path) -> PathBuf {
+    vault.join(".writepad").join("trash").join("manuscripts")
+}
+
+/// Move a whole manuscript (every block, take and cut) to the trash.
+/// Nothing is erased; [`restore_manuscript`] puts it back.
+pub fn trash_manuscript(vault: &Path, id: &str) -> Result<(), String> {
+    manifest(vault, id)?; // migrates an old single-file manuscript first
+    let to = ms_trash(vault).join(id);
+    if to.exists() {
+        fs::remove_dir_all(&to).map_err(|e| e.to_string())?;
+    }
+    fs::create_dir_all(ms_trash(vault)).map_err(|e| e.to_string())?;
+    fs::rename(ms_dir(vault, id)?, &to).map_err(|e| e.to_string())
+}
+
+/// Bring a trashed manuscript back.
+pub fn restore_manuscript(vault: &Path, id: &str) -> Result<(), String> {
+    let to = ms_dir(vault, id)?;
+    if to.exists() {
+        return Err("That manuscript is already back.".into());
+    }
+    fs::rename(ms_trash(vault).join(id), &to).map_err(|_| "Not in the trash.".to_string())
+}
+
 // ---------- structural operations ----------
 
 fn block_mut<'a>(m: &'a mut Manifest, block: &str) -> Result<&'a mut BlockMeta, String> {
@@ -717,6 +742,17 @@ mod tests {
         assert_eq!(s.len(), 3);
         assert_eq!(s[0].title, None);
         assert_eq!(s[1].text, "One.");
+    }
+
+    #[test]
+    fn trash_and_restore_whole_manuscript() {
+        let vault = temp_vault("trash-ms");
+        let id = from_sections(&vault, "Book", "draft_1", vec![("One".into(), "Hello.".into())]).unwrap();
+        assert_eq!(list(&vault).len(), 1);
+        trash_manuscript(&vault, &id).unwrap();
+        assert!(list(&vault).is_empty());
+        restore_manuscript(&vault, &id).unwrap();
+        assert_eq!(load(&vault, &id).unwrap().blocks[0].variants[0].text.trim(), "Hello.");
     }
 
     #[test]

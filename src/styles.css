@@ -125,8 +125,8 @@ input[type="range"] { padding: 0; border: none; background: none; accent-color: 
 }
 .sidebar { grid-area: side; border-right: 1px solid var(--line); }
 .inspector { grid-area: inspect; border-left: 1px solid var(--line); }
-.tabs { display: flex; gap: 4px; margin-bottom: 12px; }
-.tabs button { flex: 1; background: transparent; border-color: transparent; color: var(--muted); }
+.tabs { display: flex; gap: 2px; margin-bottom: 12px; }
+.tabs button { flex: 1 1 auto; min-width: 0; padding-left: 4px; padding-right: 4px; white-space: nowrap; background: transparent; border-color: transparent; color: var(--muted); }
 .tabs button.active { background: var(--paper); border-color: var(--line); color: var(--ink); font-weight: 600; }
 .pane .wide { margin-bottom: 10px; }
 
@@ -146,6 +146,8 @@ input[type="range"] { padding: 0; border: none; background: none; accent-color: 
 .list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list .meta { color: var(--muted); font-size: 11px; font-weight: 400; white-space: nowrap; }
 .list li button { padding: 0 6px; }
+#list-manuscripts li button { opacity: 0; }
+#list-manuscripts li:hover button, #list-manuscripts li button:focus-visible { opacity: 1; }
 #list-manuscripts li { flex-direction: column; align-items: flex-start; gap: 2px; }
 
 .outline-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 700; }
@@ -209,9 +211,10 @@ body[data-mode="none"] #editor, body[data-mode="none"] .doc-head { display: none
 .cm-editor { height: 100%; background: var(--paper); color: var(--ink); }
 .cm-editor.cm-focused { outline: none; }
 .cm-scroller { font: 18px/1.7 var(--prose); padding: 28px 0 40vh; -webkit-user-select: text; user-select: text; }
-.cm-content { max-width: 720px; margin: 0 auto; padding: 0 48px; caret-color: var(--accent); }
+.cm-content { max-width: 720px; margin: 0 auto; padding: 0 48px; caret-color: var(--ink); }
 .cm-line { padding: 0; }
-.cm-cursor { border-left: 2px solid var(--accent); }
+/* Beats CodeMirror's own theme (black, or #ddd in its dark theme). */
+.cm-editor .cm-cursorLayer .cm-cursor, .cm-editor .cm-dropCursor { border-left: 2px solid var(--ink); }
 .cm-selectionBackground, .cm-focused .cm-selectionBackground { background: rgba(127, 127, 160, 0.25) !important; }
 .cm-placeholder { color: var(--muted); }
 

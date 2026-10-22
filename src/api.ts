@@ -318,6 +318,8 @@ export const api = {
     invoke<string>("world_insert_event", { name, after, before, when, scene }),
   worldMoveEvent: (path: string, after: string | null, before: string | null) => invoke<void>("world_move_event", { path, after, before }),
   worldDeleteEvent: (path: string) => invoke<string>("world_delete_event", { path }),
+  deleteManuscript: (id: string) => invoke<void>("delete_manuscript", { id }),
+  restoreManuscript: (id: string) => invoke<void>("restore_manuscript", { id }),
   deleteNote: (path: string) => invoke<string>("delete_note", { path }),
   restoreNote: (id: string) => invoke<string>("restore_note", { id }),
 

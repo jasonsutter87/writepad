@@ -132,7 +132,6 @@ function layout(view: EditorView): DecorationSet {
   const doc = view.state.doc;
   const text = doc.toString();
   const screenplay = isScreenplay(text);
-  view.dom.classList.toggle("wp-screenplay", screenplay);
   if (!screenplay && !/^\s*>/m.test(text)) return Decoration.none;
   const lines = text.split("\n");
   const kinds = classify(lines, screenplay);
@@ -163,6 +162,16 @@ const layoutPlugin = ViewPlugin.fromClass(
     }
   },
   { decorations: (p) => p.decorations },
+);
+
+// The editor's class, through CodeMirror's own attributes: it owns the class
+// list and rewrites it, so toggling view.dom by hand can go stale between documents.
+const screenplayField = StateField.define<boolean>({
+  create: (s) => isScreenplay(s.doc.toString()),
+  update: (v, tr) => (tr.docChanged ? isScreenplay(tr.newDoc.toString()) : v),
+});
+const screenplayClass = EditorView.editorAttributes.compute([screenplayField], (s) =>
+  (s.field(screenplayField) ? { class: "wp-screenplay" } : {}) as Record<string, string>,
 );
 
 /** Wrap the selection in a marker (**, *), or unwrap it if it's already wrapped. */
@@ -264,6 +273,8 @@ export class Editor {
       speakingField,
       cadenceField,
       frontmatterPlugin,
+      screenplayField,
+      screenplayClass,
       layoutPlugin,
       // Ours beat the defaults (Enter, and Mod-i, which selects the parent syntax node there).
       Prec.high(keymap.of([

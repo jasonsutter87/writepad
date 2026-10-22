@@ -1324,10 +1324,31 @@ async function loadManuscripts() {
       el("span", { className: "name", textContent: m.title }),
       el("span", { className: "meta", textContent: `${m.blocks} blocks · ${m.variants} versions` }),
     );
+    const remove = confirmButton("×", () => deleteManuscript(m.id, m.title).catch(fail));
+    remove.title = "Delete this manuscript (click twice; Undo brings it back)";
+    li.append(remove);
     li.onclick = () => openManuscript(m.id).catch(fail);
     list.append(li);
   }
   if (!all.length) list.append(el("li", { className: "hint", textContent: "Import a script, or every draft of one, to start." }));
+}
+
+/** Move a whole manuscript to the trash, with Undo. */
+async function deleteManuscript(id: string, title: string) {
+  await flushSaves();
+  if (ms?.id === id) closeManuscript();
+  await api.deleteManuscript(id);
+  await loadManuscripts();
+  refreshLibrary();
+  toast(`Deleted “${title}”.`, false, {
+    label: "Undo",
+    run: () =>
+      api
+        .restoreManuscript(id)
+        .then(loadManuscripts)
+        .then(() => toast(`Restored “${title}”.`))
+        .catch(fail),
+  });
 }
 
 async function loadNotes() {
@@ -1337,7 +1358,7 @@ async function loadNotes() {
 
 async function loadVault() {
   const vault = settings.vault;
-  $("btn-vault").textContent = vault ? vault.split("/").pop()! : "No vault";
+  $("btn-vault").textContent = vault ? vault.split(/[\\/]/).pop()! : "No vault";
   $("btn-vault").title = vault ?? "Open a vault folder";
   if (!vault) {
     setMode("none");
