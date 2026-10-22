@@ -18,7 +18,9 @@ out of the box.
 
 **Try the demo vault.** *WRITEpad-Demo-Vault.zip* on the Releases page is a
 tour of every feature, built around *The Monkey's Paw* (public domain). Unzip
-it, open the folder in Settings, and read *Start here*. See [demo/](demo/).
+it, open the folder in Settings, and read *Start here*. From a clone, just open
+the [demo/](demo/) folder (the same vault, without its history);
+[demo-source/](demo-source/) is what builds it.
 
 To cut a release: bump `version` in `src-tauri/tauri.conf.json`, then
 `git tag v0.1.1 && git push --tags`. The **Release** workflow builds all three

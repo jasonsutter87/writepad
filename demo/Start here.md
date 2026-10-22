@@ -65,6 +65,8 @@ Under **Scripts**, **Book to script** lines the screenplay up against the story:
 
 History is on, so this vault is a git repository. Open **History** to see the vault being built step by step. On **The first wish**, click an older version to onion-skin against it, or **Restore as new take**.
 
+If History says **Turn on history**, you opened the copy in WRITEpad's source repo, which can't carry its own history. The *WRITEpad-Demo-Vault.zip* on the Releases page has all of it.
+
 ## 11. Export
 
 **Export** writes the live cut as EPUB, PDF, Markdown, plain text, or an MP3 audiobook narrated with your voices.

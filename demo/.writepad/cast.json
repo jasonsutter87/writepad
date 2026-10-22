@@ -1,0 +1,18 @@
+{
+  "ms:the-monkey-s-paw-screenplay": {
+    "__narrator": "bf_emma",
+    "MR. WHITE": "bm_george",
+    "MRS. WHITE": "bf_isabella",
+    "HERBERT": "am_michael",
+    "MORRIS": "bm_lewis",
+    "STRANGER": "bm_daniel"
+  },
+  "ms:trifles-table-read": {
+    "__narrator": "af_heart",
+    "COUNTY ATTORNEY": "am_adam",
+    "SHERIFF": "am_eric",
+    "HALE": "am_fenrir",
+    "MRS PETERS": "af_sarah",
+    "MRS HALE": "af_bella"
+  }
+}
