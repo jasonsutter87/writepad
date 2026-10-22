@@ -1,5 +1,6 @@
 mod dictate;
 mod settings;
+mod tts_setup;
 mod watch;
 
 use dictate::{Dictation, Mic, Whisper};
@@ -197,6 +198,27 @@ fn diff_words(old: String, new: String) -> Vec<diff::Op> {
 #[tauri::command]
 async fn voices(app: AppHandle) -> Result<Vec<String>, String> {
     blocking(app, |st| st.with_worker(|w| Ok(w.voices.clone()))).await
+}
+
+/// Install Kokoro into a private venv and download the models, then point
+/// Settings at them. Progress arrives as "narration-setup" events.
+#[tauri::command]
+async fn setup_narration(app: AppHandle) -> Result<Settings, String> {
+    let emitter = app.clone();
+    blocking(app, move |st| {
+        let preferred = st.settings.lock().unwrap().python.clone();
+        let root = emitter.path().app_data_dir().map_err(|e| e.to_string())?.join("tts");
+        let done = tts_setup::install(&root, &preferred, |message| {
+            let _ = emitter.emit("narration-setup", tts_setup::Progress { message });
+        })?;
+        *st.worker.lock().unwrap() = None;
+        let mut s = st.settings.lock().unwrap();
+        s.python = done.python;
+        s.model_dir = done.model_dir;
+        settings::save(&st.settings_path, &s)?;
+        Ok(s.clone())
+    })
+    .await
 }
 
 #[tauri::command]
@@ -607,6 +629,7 @@ pub fn run() {
             import_drafts,
             diff_words,
             voices,
+            setup_narration,
             synth,
             get_lexicon,
             set_lexicon,

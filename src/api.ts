@@ -281,6 +281,7 @@ export const api = {
   diffWords: (old: string, next: string) => invoke<DiffOp[]>("diff_words", { old, new: next }),
 
   voices: () => invoke<string[]>("voices"),
+  setupNarration: () => invoke<Settings>("setup_narration"),
   synth: (text: string, voice: string, speed: number) => invoke<ArrayBuffer>("synth", { text, voice, speed }),
   getLexicon: () => invoke<Lexicon>("get_lexicon"),
   setLexicon: (lexicon: Lexicon) => invoke<void>("set_lexicon", { lexicon }),

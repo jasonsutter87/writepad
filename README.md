@@ -12,7 +12,8 @@ Installers for Mac (Apple Silicon and Intel) and Windows are on the
 [Releases](https://github.com/jasonsutter87/writepad/releases) page. They aren't
 signed yet: on a Mac, open the app once, then System Settings → Privacy &
 Security → **Open Anyway**; on Windows, SmartScreen → **More info → Run anyway**.
-Narration needs Python with Kokoro (see Narration below); everything else works
+Narration needs Python 3.10+; press Listen and choose **Set up narration**, and
+WRITEpad installs Kokoro and downloads the voices itself. Everything else works
 out of the box.
 
 To cut a release: bump `version` in `src-tauri/tauri.conf.json`, then
@@ -48,7 +49,9 @@ Then, in PowerShell:
     npm install
     npm run tauri dev               # or: npm run tauri build  -> an installer under target\release\bundle
 
-Narration needs Python 3.10+ with Kokoro, and the two model files:
+Narration needs Python 3.10+ with Kokoro, and the two model files. The app's
+**Set up narration** button (Settings, or the toast when Listen fails) does all
+of this for you. By hand:
 
     py -m venv $HOME\Documents\ChooseYourAdventure\.venv-tts
     & $HOME\Documents\ChooseYourAdventure\.venv-tts\Scripts\pip install kokoro-onnx soundfile

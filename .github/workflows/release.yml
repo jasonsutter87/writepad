@@ -69,6 +69,6 @@ jobs:
             **Mac:** download the `.dmg` (`aarch64` for Apple Silicon, `x64` for Intel). The app isn't signed by Apple yet, so the first time: open it, then System Settings → Privacy & Security → **Open Anyway**.
             **Windows:** download the `.msi` or `-setup.exe`. SmartScreen may warn because it's unsigned: **More info → Run anyway**.
 
-            Narration needs Python with Kokoro; see the README.
+            Narration: press Listen and choose **Set up narration**. It installs Kokoro and downloads the voices (about 350 MB). You need Python 3.10+ ([python.org](https://www.python.org/downloads/)).
           releaseDraft: false
           prerelease: false

@@ -208,7 +208,39 @@ narrator.onPlaying = (playing) => {
   $("btn-play").textContent = playing ? "■ Stop" : "▶ Listen";
   document.body.classList.toggle("playing", playing);
 };
-narrator.onError = fail;
+narrator.onError = narrationFail;
+
+/** Narration errors that mean Kokoro isn't installed get a one-click fix. */
+function narrationFail(e: unknown, prefix = "") {
+  const msg = String(e);
+  if (/Kokoro failed to load|Couldn't start Python|narration worker exited/.test(msg)) {
+    toast(`${prefix}Narration isn't set up on this computer yet.`, true, { label: "Set up narration", run: () => setupNarration() });
+  } else toast(prefix + msg, true);
+}
+
+let settingUp = false;
+async function setupNarration() {
+  if (settingUp) return;
+  settingUp = true;
+  const btn = $<HTMLButtonElement>("btn-setup-narration");
+  btn.disabled = true;
+  toast("Setting up narration…");
+  try {
+    const s = await api.setupNarration();
+    settings.python = s.python;
+    settings.model_dir = s.model_dir;
+    $<HTMLInputElement>("set-python").value = s.python;
+    $<HTMLInputElement>("set-models").value = s.model_dir;
+    await loadVoices();
+    if (voices.length) toast("Narration is ready. Press Listen.");
+  } catch (e) {
+    toast(String(e), true);
+  } finally {
+    settingUp = false;
+    btn.disabled = false;
+  }
+}
+listen<{ message: string }>("narration-setup", (e) => toast(e.payload.message));
 
 function togglePlay() {
   if (narrator.playing) return narrator.stop();
@@ -1434,7 +1466,7 @@ async function loadVoices() {
     voices = await api.voices();
   } catch (e) {
     voices = [];
-    toast(`Narration isn't available yet: ${e}`, true);
+    narrationFail(e);
   }
   renderVoices();
   loadCast().catch(() => {});
@@ -1920,6 +1952,7 @@ function wire() {
     dlgSettings.showModal();
   };
   $("btn-set-vault").onclick = () => chooseVault().catch(fail);
+  $("btn-setup-narration").onclick = () => setupNarration();
   dlgSettings.onclose = async () => {
     if (dlgSettings.returnValue !== "ok") return;
     const before = `${settings.python}|${settings.model_dir}`;
