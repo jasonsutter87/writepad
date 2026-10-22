@@ -1,6 +1,6 @@
 [package]
 name = "writepad-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "WRITEpad's engine: manuscripts, takes, history, import and export. Shared by the app, the CLI and the MCP server."
 

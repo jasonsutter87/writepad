@@ -1,6 +1,6 @@
 [package]
 name = "writepad-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Headless WRITEpad: a CLI and an MCP server so agents can work on manuscripts."
 
