@@ -6,7 +6,7 @@ mod watch;
 use dictate::{Dictation, Mic, Whisper};
 use manuscript::{Manuscript, ManuscriptInfo};
 use narrate::{Lexicon, Worker};
-use writepad_core::{diff, export, history, manuscript, narrate, profile, script, vault, world};
+use writepad_core::{diff, export, history, manuscript, narrate, profile, script, suggest, vault, world};
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -471,6 +471,27 @@ async fn world_scene(app: AppHandle, manuscript: String, block: String) -> Resul
     blocking(app, move |st| world::scene_info(&st.vault()?, &manuscript, &block)).await
 }
 
+/// Characters and locations found in a manuscript by plain rules (no AI).
+#[tauri::command]
+async fn world_suggest(app: AppHandle, manuscript: String) -> Result<suggest::Suggestions, String> {
+    blocking(app, move |st| suggest::suggest(&st.vault()?, &manuscript)).await
+}
+
+/// Add the picked suggestions to the world as drafts, plus an optional timeline skeleton.
+#[tauri::command]
+async fn world_suggest_apply(app: AppHandle, manuscript: String, picks: Vec<suggest::Suggestion>, timeline: bool) -> Result<Vec<String>, String> {
+    blocking(app, move |st| suggest::apply(&st.vault()?, &manuscript, &picks, timeline)).await
+}
+
+#[tauri::command]
+async fn world_import_csv(app: AppHandle, path: String) -> Result<suggest::CsvImport, String> {
+    blocking(app, move |st| {
+        let text = std::fs::read_to_string(&path).map_err(|e| format!("{path}: {e}"))?;
+        suggest::import_csv(&st.vault()?, &text)
+    })
+    .await
+}
+
 #[tauri::command]
 fn world_add(state: State<AppState>, kind: String, name: String) -> Result<String, String> {
     world::add(&state.vault()?, &kind, &name, &[], "")
@@ -651,6 +672,9 @@ pub fn run() {
             world_entity,
             world_scene,
             world_add,
+            world_suggest,
+            world_suggest_apply,
+            world_import_csv,
             world_insert_event,
             world_move_event,
             world_delete_event,

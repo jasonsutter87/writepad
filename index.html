@@ -64,6 +64,10 @@
           <button id="btn-graph" type="button">Graph</button>
           <button id="btn-timeline" type="button">Timeline</button>
         </div>
+        <div class="row world-views">
+          <button id="btn-world-suggest" type="button" title="Find characters and places in a manuscript, by plain rules (no AI)">Suggest…</button>
+          <button id="btn-world-csv" type="button" title="Import characters, places and things from a spreadsheet (.csv)">Import CSV…</button>
+        </div>
         <div id="world-groups"></div>
         <details id="world-issues" hidden>
           <summary></summary>
@@ -239,6 +243,21 @@
         <div class="actions">
           <button value="cancel">Cancel</button>
           <button value="ok" class="primary">Add</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-suggest">
+      <form method="dialog">
+        <h2>Suggest from a manuscript</h2>
+        <p class="hint">WRITEpad reads the manuscript with plain rules, no AI. Ticked entries go into World as drafts, for you to keep, edit or delete.</p>
+        <label class="field">Manuscript <select id="suggest-ms"></select></label>
+        <p id="suggest-mode" class="hint"></p>
+        <div id="suggest-list" class="suggest-list"></div>
+        <label class="check"><input id="suggest-timeline" type="checkbox" /> Also start a timeline: one event per scene, in order</label>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button id="btn-suggest-add" value="ok" class="primary">Add as drafts</button>
         </div>
       </form>
     </dialog>

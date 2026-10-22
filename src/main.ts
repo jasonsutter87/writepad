@@ -1,7 +1,7 @@
 import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Settings, type ThemeMode, type Variant } from "./api";
+import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
 import { applyTheme, contrast, PRESETS } from "./theme";
 import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
@@ -995,6 +995,75 @@ async function openTimeline() {
 }
 
 /** Re-render whatever world view is showing, plus the side panels. */
+/** World → Suggest…: names and places found in a manuscript by plain rules, added as drafts. */
+async function openSuggest() {
+  if (!settings.vault) return toast("Open a vault first.");
+  const all = await api.listManuscripts();
+  if (!all.length) return toast("Import or write a manuscript first; suggestions come from its text.");
+  const dlg = $<HTMLDialogElement>("dlg-suggest");
+  const sel = $<HTMLSelectElement>("suggest-ms");
+  const list = $("suggest-list");
+  const timeline = $<HTMLInputElement>("suggest-timeline");
+  const addBtn = $<HTMLButtonElement>("btn-suggest-add");
+  sel.replaceChildren(...all.map((m) => el("option", { value: m.id, textContent: m.title, selected: m.id === ms?.id })));
+  timeline.checked = false;
+  let found: WorldSuggestions | null = null;
+  const boxes = new Map<HTMLInputElement, WorldSuggestion>();
+  const count = () => {
+    const n = [...boxes.keys()].filter((b) => b.checked).length;
+    addBtn.textContent = n ? `Add ${n} as draft${n === 1 ? "" : "s"}` : timeline.checked ? "Add the timeline" : "Add as drafts";
+    addBtn.disabled = !n && !timeline.checked;
+  };
+  timeline.onchange = count;
+  const render = async () => {
+    boxes.clear();
+    list.replaceChildren(el("p", { className: "hint", textContent: "Reading…" }));
+    found = await api.worldSuggest(sel.value);
+    $("suggest-mode").textContent = found.screenplay
+      ? "Read as a screenplay: characters from the names above dialogue, places from scene headings."
+      : "Read as prose: names that recur away from the start of a sentence, who “said” what, and places. Names like “the old man” aren't found; add those yourself.";
+    list.replaceChildren();
+    for (const [label, items] of [["Characters", found.characters], ["Locations", found.locations]] as const) {
+      list.append(el("h3", { className: "dialog-section", textContent: `${label} (${items.length})` }));
+      if (!items.length) list.append(el("p", { className: "hint", textContent: "Nothing new: everything found is already in World." }));
+      for (const s of items) {
+        const box = el("input", { type: "checkbox", checked: true });
+        box.onchange = count;
+        boxes.set(box, s);
+        const where = s.scenes.length > 3 ? `${s.scenes.length} scenes` : s.scenes.join(", ");
+        const meta = [`${s.mentions}×`, s.why, s.aliases.length ? `also “${s.aliases.join("”, “")}”` : "", where].filter(Boolean).join(" · ");
+        list.append(el("label", { className: "suggest-item" }, box, el("span", { className: "name", textContent: s.name }), el("span", { className: "meta", textContent: meta })));
+      }
+    }
+    count();
+  };
+  sel.onchange = () => render().catch(fail);
+  dlg.returnValue = "";
+  dlg.showModal();
+  await render();
+  const ok = await new Promise<boolean>((resolve) => (dlg.onclose = () => resolve(dlg.returnValue === "ok")));
+  const result = found as WorldSuggestions | null; // set inside render(), which TS can't see
+  if (!ok || !result) return;
+  const picks = [...boxes].filter(([b]) => b.checked).map(([, s]) => s);
+  const created = await api.worldSuggestApply(result.manuscript, picks, timeline.checked);
+  await loadWorld();
+  await refreshWorldViews();
+  toast(created.length ? `Added ${created.length} draft${created.length === 1 ? "" : "s"} to World. Keep, edit or delete each one there.` : "Nothing new to add.");
+}
+
+/** World → Import CSV…: type,name,aliases,description rows into world notes. */
+async function importWorldCsv() {
+  if (!settings.vault) return toast("Open a vault first.");
+  const picked = await open({ multiple: false, title: "Import characters, places and things", filters: [{ name: "CSV", extensions: ["csv"] }] });
+  if (typeof picked !== "string") return;
+  const r = await api.worldImportCsv(picked);
+  await loadWorld();
+  await refreshWorldViews();
+  const file = picked.split(/[\\/]/).pop();
+  if (r.skipped.length) toast(`Imported ${r.created.length} from ${file}. Skipped ${r.skipped.length}: ${r.skipped[0]}`, true);
+  else toast(`Imported ${r.created.length} from ${file}.`);
+}
+
 async function refreshWorldViews() {
   const mode = document.body.dataset.mode;
   if (mode === "timeline") await openTimeline();
@@ -1766,6 +1835,8 @@ function wire() {
   $("btn-play").onclick = () => togglePlay();
   $("btn-graph").onclick = () => openGraph();
   $("btn-timeline").onclick = () => openTimeline();
+  $("btn-world-suggest").onclick = () => openSuggest().catch(fail);
+  $("btn-world-csv").onclick = () => importWorldCsv().catch(fail);
   $("btn-event-here").onclick = async () => {
     const d = doc;
     if (d?.kind !== "block" || !ms) return;

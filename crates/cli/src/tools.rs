@@ -6,7 +6,7 @@
 
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
-use writepad_core::{diff, export, history, manuscript as ms, profile, script, vault, world};
+use writepad_core::{diff, export, history, manuscript as ms, profile, script, suggest, vault, world};
 
 pub struct Ctx {
     pub vault: PathBuf,
@@ -442,6 +442,41 @@ pub fn all() -> Vec<Tool> {
                 }
                 let path = world::add(&ctx.vault, s(a, "type")?, s(a, "name")?, &props, s(a, "body")?)?;
                 Ok(json!({ "path": path }))
+            },
+        },
+        Tool {
+            name: "world_suggest",
+            description: "Suggest characters and locations for a manuscript by plain rules, no AI: screenplay cues and scene headings, or in prose, recurring capitalised names, speakers (\"said X\") and places. Leaves out what the world already has. Read-only; use world_suggest_apply to add picks.",
+            schema: || obj(json!({ "manuscript": str_prop(MS) }), &["manuscript"]),
+            run: |ctx, a| Ok(json!(suggest::suggest(&ctx.vault, s(a, "manuscript")?)?)),
+        },
+        Tool {
+            name: "world_suggest_apply",
+            description: "Add suggestions from world_suggest to the world as drafts for the author to review. `names` picks which (default: all); `timeline` also adds one draft event per scene, in order.",
+            schema: || {
+                obj(
+                    json!({ "manuscript": str_prop(MS), "names": { "type": "array", "items": { "type": "string" } },
+                            "timeline": { "type": "boolean", "description": "Also add a timeline skeleton: one event per scene." } }),
+                    &["manuscript"],
+                )
+            },
+            run: |ctx, a| {
+                let sug = suggest::suggest(&ctx.vault, s(a, "manuscript")?)?;
+                let names: Option<Vec<&str>> = a["names"].as_array().map(|n| n.iter().filter_map(|x| x.as_str()).collect());
+                let picks: Vec<suggest::Suggestion> =
+                    sug.characters.into_iter().chain(sug.locations).filter(|x| names.as_ref().is_none_or(|n| n.contains(&x.name.as_str()))).collect();
+                let created = suggest::apply(&ctx.vault, &sug.manuscript, &picks, a["timeline"].as_bool().unwrap_or(false))?;
+                Ok(json!({ "created": created }))
+            },
+        },
+        Tool {
+            name: "world_import_csv",
+            description: "Import world entries from a CSV file with a header row: type,name,aliases,description (aliases separated by ;). Types: character, location, thing.",
+            schema: || obj(json!({ "path": str_prop("Absolute path to the .csv file.") }), &["path"]),
+            run: |ctx, a| {
+                let path = s(a, "path")?;
+                let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+                Ok(json!(suggest::import_csv(&ctx.vault, &text)?))
             },
         },
         Tool {

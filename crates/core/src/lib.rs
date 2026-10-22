@@ -11,6 +11,7 @@ pub mod narrate;
 pub mod pdf;
 pub mod profile;
 pub mod script;
+pub mod suggest;
 pub mod vault;
 pub mod world;
 
