@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WRITEpad</title>
+    <script>
+      // Apply the last theme before first paint; src/theme.ts keeps this cache current.
+      try {
+        const t = JSON.parse(localStorage.getItem("writepad-theme") || "null");
+        const r = document.documentElement;
+        const osDark = matchMedia("(prefers-color-scheme: dark)").matches;
+        r.dataset.theme = !t || t.system ? (osDark ? "dark" : "light") : t.mode;
+        for (const k in (t && t.vars) || {}) r.style.setProperty(k, t.vars[k]);
+      } catch {}
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </head>
   <body data-mode="none">
@@ -274,6 +284,32 @@
         <p class="hint">No Kokoro yet? <button id="btn-setup-narration" type="button">Set up narration</button> installs it and downloads the voices (about 350 MB). Needs Python 3.10 or newer.</p>
         <label class="field">Voice for <i>italic</i> lines <select id="set-italic"></select></label>
         <label class="field">Pause after paragraphs (seconds) <input id="set-pause" type="number" min="0" max="3" step="0.05" /></label>
+        <h3 class="dialog-section">Appearance</h3>
+        <label class="field">Theme
+          <select id="set-theme">
+            <option value="system">Match system</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <div id="custom-theme" hidden>
+          <div id="theme-presets" class="theme-presets"></div>
+          <label class="field">Based on
+            <select id="ct-base">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <div class="theme-colors">
+            <label><input id="ct-sidebar" type="color" /> Sidebar</label>
+            <label><input id="ct-background" type="color" /> Background</label>
+            <label><input id="ct-page" type="color" /> Page</label>
+            <label><input id="ct-text" type="color" /> Text</label>
+            <label><input id="ct-accent" type="color" /> Accent</label>
+          </div>
+          <p id="ct-contrast" class="hint" hidden></p>
+        </div>
         <h3 class="dialog-section">Dictation</h3>
         <label class="field">Whisper model (shared with murmur) <input id="set-whisper" spellcheck="false" placeholder="small" /></label>
         <label class="field">Language <input id="set-lang" spellcheck="false" placeholder="en, es, or auto" /></label>

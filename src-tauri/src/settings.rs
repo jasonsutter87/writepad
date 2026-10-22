@@ -29,6 +29,37 @@ pub struct Settings {
     pub history_autosave: bool,
     /// Byline for exports.
     pub author: String,
+    /// "system" (follow the OS), "light", "dark" or "custom".
+    pub theme: String,
+    /// Colors for the custom theme.
+    pub custom_theme: CustomTheme,
+}
+
+/// A custom color theme, like Slack's: a light or dark base plus five colors.
+/// Muted text, rules and the desk are mixed from these in the UI.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(default)]
+pub struct CustomTheme {
+    /// "light" or "dark": which built-in palette the other colors start from.
+    pub base: String,
+    pub sidebar: String,
+    pub background: String,
+    pub page: String,
+    pub text: String,
+    pub accent: String,
+}
+
+impl Default for CustomTheme {
+    fn default() -> Self {
+        CustomTheme {
+            base: "light".into(),
+            sidebar: "#efe9de".into(),
+            background: "#f6f2ea".into(),
+            page: "#fffdf8".into(),
+            text: "#23212b".into(),
+            accent: "#d9774a".into(),
+        }
+    }
 }
 
 impl Default for Settings {
@@ -54,6 +85,8 @@ impl Default for Settings {
             dictation_polish: false,
             history_autosave: true,
             author: String::new(),
+            theme: "system".into(),
+            custom_theme: CustomTheme::default(),
         }
     }
 }

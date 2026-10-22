@@ -15,6 +15,19 @@ export interface Settings {
   dictation_polish: boolean;
   history_autosave: boolean;
   author: string;
+  theme: ThemeMode;
+  custom_theme: CustomTheme;
+}
+
+export type ThemeMode = "system" | "light" | "dark" | "custom";
+
+export interface CustomTheme {
+  base: "light" | "dark";
+  sidebar: string;
+  background: string;
+  page: string;
+  text: string;
+  accent: string;
 }
 
 export interface Snapshot {

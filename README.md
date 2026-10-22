@@ -190,6 +190,14 @@ get chapters cut, pages per chapter, scenes with no clear source, and the
 dialogue kept word for word (six-word runs found in the book). Both sources
 are reread each time; nothing extra is stored.
 
+## Appearance
+
+Settings → **Theme**: match the system, light, dark, or **Custom**. A custom
+theme starts from the light or dark palette and sets five colors (sidebar,
+background, page, text, accent), like Slack's; muted text, rules and the desk
+are mixed from those, and a warning shows if text and page are too close to
+read comfortably. Presets: Paper, Night, Ocean, Rose, Forest, Midnight.
+
 ## Formatting and screenplays
 
 ⌘B and ⌘I wrap the selection in `**bold**` and `*italic*`. Alignment is saved
