@@ -49,17 +49,23 @@ Open **The Monkey's Paw (screenplay)**. It's [Fountain](https://fountain.io): he
 
 Press **▶ Listen** for a table read: every character has their own voice (see **Cast**), and the narrator reads the action.
 
+For a bigger cast, open **Trifles (table read)**: Susan Glaspell's 1916 one-act play, laid out in Fountain. Five speakers (the County Attorney, the Sheriff, Hale, Mrs. Peters, Mrs. Hale), each with their own voice, plus a narrator for the stage directions. Change anyone in **Cast**, or **Recast everyone**.
+
 ## 8. Library: learn from books
 
-Open **Library**. Three books are measured: the story itself, Jacobs's *Many Cargoes*, and a volume of Poe's tales. WRITEpad keeps only numbers, never the text. *Many Cargoes* and Poe are blended 60/40 into a **target**, and **Compare** shows the manuscript **Against your target**. While you write, the strip under a scene's title underlines stretches that drift from it.
+Open **Library**. Three stories are measured: *The Monkey's Paw*, Dickens's *The Signal-Man* and Poe's *The Tell-Tale Heart*. WRITEpad keeps only numbers, never the text. They're blended 40/30/30 into a **target**, and **Compare** shows any manuscript **Against your target**. While you write, the strip under a scene's title shows its length and dialogue against the target, and underlines stretches that drift from it.
+
+## 9. Write toward a target
+
+**The Sexton's Bell** is an original story, three short chapters written toward that blend. Each chapter has two takes: **Draft 1**, written without looking at the numbers, and **Revised toward target**. Compare them with the onion skin to see exactly what changed, and read [[Writing toward a target]] for the before and after numbers.
 
 Under **Scripts**, **Book to script** lines the screenplay up against the story: which scene draws on which part, what was cut, and which lines survived word for word.
 
-## 9. History
+## 10. History
 
 History is on, so this vault is a git repository. Open **History** to see the vault being built step by step. On **The first wish**, click an older version to onion-skin against it, or **Restore as new take**.
 
-## 10. Export
+## 11. Export
 
 **Export** writes the live cut as EPUB, PDF, Markdown, plain text, or an MP3 audiobook narrated with your voices.
 
@@ -69,4 +75,5 @@ History is on, so this vault is a git repository. Open **History** to see the va
 - [[Why the knocks work]]
 - [[About W. W. Jacobs]]
 - [[Adaptation notes]]
+- [[Writing toward a target]]
 - [[Questions for a second draft]] (no note yet: ⌘-click to create it)

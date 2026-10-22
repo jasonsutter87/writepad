@@ -14,15 +14,20 @@ What's in it:
   timeline linked to scenes, with a branch for the alternate ending and two
   agent drafts to review.
 - **Screenplay** in Fountain with a cast for the table read, plus pronunciations.
-- **Library**: *Many Cargoes* and Poe blended into a target; Book to script
-  between the screenplay and the story.
+- **Library**: *The Monkey's Paw*, Dickens's *The Signal-Man* and Poe's *The
+  Tell-Tale Heart* blended 40/30/30 into a target; Book to script between the
+  screenplay and the story.
+- **Write toward a target**: *The Sexton's Bell*, an original story in three
+  short chapters, each with a first draft and a revision toward the target
+  (numbers in *Writing toward a target*).
+- **Table read**: Glaspell's *Trifles* (1916) in Fountain, five voices.
 - **History**: the vault is a git repo, one snapshot per build step.
 
 ## Rebuilding it
 
     python demo/build.py "path/to/WRITEpad Demo" --zip WRITEpad-Demo-Vault.zip
 
-Needs Rust and network access (two EPUBs come from Project Gutenberg). It
+Needs Rust. It
 builds the `writepad` CLI and `demo/helper` (history, cuts and the target,
 which the CLI doesn't expose), then writes everything through them.
 
@@ -30,5 +35,8 @@ which the CLI doesn't expose), then writes everything through them.
 - `src/Modern pass.md`: the revised *The first wish*
 - `src/takes/`: the agents' takes
 - `src/Draft 1.md`: the screenplay, one `##` per act (the `.fountain` is made from it)
+- `src/library/`: *The Signal-Man* (Gutenberg #1289) and *The Tell-Tale Heart* (#2148), split into scenes
+- `src/sexton/`: *The Sexton's Bell*, draft 1 and the revision
+- `src/Trifles.md`: *Trifles* (Gutenberg #10623) in Fountain
 - `src/notes/`: *Start here* and the notes
 - `build.py`: world notes, timeline, cast, pronunciations and the build order
