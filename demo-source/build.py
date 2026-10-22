@@ -1,9 +1,12 @@
 """Build the WRITEpad demo vault (The Monkey's Paw) with the app's own CLI and core.
 
-    python demo/build.py <empty or new folder> [--zip out.zip]
+    python demo-source/build.py [--zip WRITEpad-Demo-Vault.zip]
 
-Builds the `writepad` CLI and demo/helper, then writes every file through the
-same code the app uses, taking a history snapshot after each step.
+Builds the `writepad` CLI and demo-source/helper, then writes every file through
+the same code the app uses, taking a history snapshot after each step. The vault
+is built fresh in a temp folder, zipped with its history if asked (that's the
+release asset), and copied without its .git into the repo's demo/ folder, ready
+to open.
 """
 
 import json
@@ -25,9 +28,11 @@ if "--zip" in args:
     i = args.index("--zip")
     ZIP = Path(args[i + 1]).resolve()
     del args[i : i + 2]
-if len(args) != 1:
+if args:
     sys.exit(__doc__)
-V = Path(args[0]).resolve()
+OUT = ROOT / "demo"
+BUILD = Path(tempfile.mkdtemp(prefix="writepad-demo-"))
+V = BUILD / "WRITEpad Demo"
 
 subprocess.run(["cargo", "build", "--release", "-p", "writepad-cli"], cwd=ROOT, check=True)
 subprocess.run(["cargo", "build", "--release", "--manifest-path", str(HERE / "helper" / "Cargo.toml"), "--target-dir", str(ROOT / "target")], check=True)
@@ -74,9 +79,7 @@ def scene(block):
     return f"[[{MS}#{block}]]"
 
 
-if V.exists() and any(V.iterdir()):
-    sys.exit(f"{V} isn't empty; refusing to build over it.")
-V.mkdir(parents=True, exist_ok=True)
+V.mkdir(parents=True)
 
 # 1. History on, then the story itself.
 helper("history-on")
@@ -286,6 +289,10 @@ for lock in V.rglob("*.lock"):
 if ZIP:
     shutil.make_archive(str(ZIP.with_suffix("")), "zip", V.parent, V.name)
     print("zip:", ZIP)
-print("vault:", V)
+# The repo's copy: generated, so replaced wholesale. No .git (a repo can't hold one).
+shutil.rmtree(OUT, ignore_errors=True)
+shutil.copytree(V, OUT, ignore=shutil.ignore_patterns(".git"))
+shutil.rmtree(BUILD, ignore_errors=True)
+print("vault:", OUT)
 print("manuscript:", ms_id, "screenplay:", sp_id)
 print("books:", {k: v["id"] for k, v in books.items()}, "script:", script["id"], "sexton:", sx_id, "trifles:", tr_id)

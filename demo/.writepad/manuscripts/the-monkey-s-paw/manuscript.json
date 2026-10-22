@@ -1,0 +1,210 @@
+{
+  "version": 2,
+  "id": "the-monkey-s-paw",
+  "title": "The Monkey's Paw",
+  "blocks": [
+    {
+      "id": "100fa1932403",
+      "title": "Front matter",
+      "variants": [
+        {
+          "id": "132c4a917c62",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        }
+      ],
+      "live": "132c4a917c62",
+      "raw": true
+    },
+    {
+      "id": "2705e04a376a",
+      "title": "The visitor",
+      "variants": [
+        {
+          "id": "e25fbad2165d",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        },
+        {
+          "id": "2db39bea831c",
+          "label": "tighter opening",
+          "author": "line-editor",
+          "created": 1792695208
+        }
+      ],
+      "live": "e25fbad2165d",
+      "raw": false
+    },
+    {
+      "id": "cb20f535c9a4",
+      "title": "The paw",
+      "variants": [
+        {
+          "id": "182ddeb56c86",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        }
+      ],
+      "live": "182ddeb56c86",
+      "raw": false
+    },
+    {
+      "id": "20f66e3b75ce",
+      "title": "The first wish",
+      "variants": [
+        {
+          "id": "ab3dc27ba903",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        },
+        {
+          "id": "aa38f9938774",
+          "label": "Modern pass",
+          "author": "",
+          "created": 1792695208
+        }
+      ],
+      "live": "ab3dc27ba903",
+      "raw": false
+    },
+    {
+      "id": "8a04e37b9f55",
+      "title": "Morning",
+      "variants": [
+        {
+          "id": "fab07c4d6f62",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        }
+      ],
+      "live": "fab07c4d6f62",
+      "raw": false
+    },
+    {
+      "id": "a0e17ef004fa",
+      "title": "Maw and Meggins",
+      "variants": [
+        {
+          "id": "54cc3c847f49",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        }
+      ],
+      "live": "54cc3c847f49",
+      "raw": false
+    },
+    {
+      "id": "99a3e4a3e225",
+      "title": "The second wish",
+      "variants": [
+        {
+          "id": "feaf5f13efa2",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        }
+      ],
+      "live": "feaf5f13efa2",
+      "raw": false
+    },
+    {
+      "id": "411ac2c59f54",
+      "title": "The knocking",
+      "variants": [
+        {
+          "id": "10e4b7481a01",
+          "label": "Jacobs 1902",
+          "author": "",
+          "created": 1792695207
+        },
+        {
+          "id": "9f3783ed8128",
+          "label": "alt ending: the door opens",
+          "author": "story-doctor",
+          "created": 1792695208
+        }
+      ],
+      "live": "10e4b7481a01",
+      "raw": false
+    }
+  ],
+  "cuts": [
+    {
+      "name": "Jacobs 1902",
+      "order": [
+        "100fa1932403",
+        "2705e04a376a",
+        "cb20f535c9a4",
+        "20f66e3b75ce",
+        "8a04e37b9f55",
+        "a0e17ef004fa",
+        "99a3e4a3e225",
+        "411ac2c59f54"
+      ],
+      "picks": {
+        "411ac2c59f54": "10e4b7481a01",
+        "99a3e4a3e225": "feaf5f13efa2",
+        "8a04e37b9f55": "fab07c4d6f62",
+        "cb20f535c9a4": "182ddeb56c86",
+        "2705e04a376a": "e25fbad2165d",
+        "100fa1932403": "132c4a917c62",
+        "a0e17ef004fa": "54cc3c847f49",
+        "20f66e3b75ce": "ab3dc27ba903"
+      }
+    },
+    {
+      "name": "Modern pass",
+      "order": [
+        "100fa1932403",
+        "2705e04a376a",
+        "cb20f535c9a4",
+        "20f66e3b75ce",
+        "8a04e37b9f55",
+        "a0e17ef004fa",
+        "99a3e4a3e225",
+        "411ac2c59f54"
+      ],
+      "picks": {
+        "cb20f535c9a4": "182ddeb56c86",
+        "8a04e37b9f55": "fab07c4d6f62",
+        "2705e04a376a": "e25fbad2165d",
+        "100fa1932403": "132c4a917c62",
+        "411ac2c59f54": "10e4b7481a01",
+        "99a3e4a3e225": "feaf5f13efa2",
+        "a0e17ef004fa": "54cc3c847f49",
+        "20f66e3b75ce": "aa38f9938774"
+      }
+    },
+    {
+      "name": "Cold open",
+      "order": [
+        "100fa1932403",
+        "411ac2c59f54",
+        "2705e04a376a",
+        "cb20f535c9a4",
+        "20f66e3b75ce",
+        "8a04e37b9f55",
+        "a0e17ef004fa",
+        "99a3e4a3e225"
+      ],
+      "picks": {
+        "411ac2c59f54": "10e4b7481a01",
+        "20f66e3b75ce": "ab3dc27ba903",
+        "8a04e37b9f55": "fab07c4d6f62",
+        "cb20f535c9a4": "182ddeb56c86",
+        "a0e17ef004fa": "54cc3c847f49",
+        "100fa1932403": "132c4a917c62",
+        "99a3e4a3e225": "feaf5f13efa2",
+        "2705e04a376a": "e25fbad2165d"
+      }
+    }
+  ],
+  "separator": false,
+  "rev": 12
+}

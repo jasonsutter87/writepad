@@ -6,3 +6,6 @@ src-tauri/gen
 /target
 src-tauri/Cargo.lock
 __pycache__
+# Lock files WRITEpad makes while the demo vault is open
+demo/**/.lock
+demo/**/.*.lock

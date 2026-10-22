@@ -1,0 +1,84 @@
+{
+  "version": 2,
+  "id": "the-sexton-s-bell",
+  "title": "The Sexton's Bell",
+  "blocks": [
+    {
+      "id": "0d0f128f9699",
+      "title": "Front matter",
+      "variants": [
+        {
+          "id": "95315abad5fd",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        }
+      ],
+      "live": "95315abad5fd",
+      "raw": true
+    },
+    {
+      "id": "d282441a904e",
+      "title": "The bell-row",
+      "variants": [
+        {
+          "id": "7797d11ab0b0",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        },
+        {
+          "id": "fed414aa4a18",
+          "label": "Revised toward target",
+          "author": "",
+          "created": 1792695209
+        }
+      ],
+      "live": "fed414aa4a18",
+      "raw": false
+    },
+    {
+      "id": "8dbe47f10249",
+      "title": "The quiet night",
+      "variants": [
+        {
+          "id": "ab2c5cfbf0a3",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        },
+        {
+          "id": "9b2fb31262aa",
+          "label": "Revised toward target",
+          "author": "",
+          "created": 1792695209
+        }
+      ],
+      "live": "9b2fb31262aa",
+      "raw": false
+    },
+    {
+      "id": "716aba07d25e",
+      "title": "The cord",
+      "variants": [
+        {
+          "id": "6ab075a52668",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        },
+        {
+          "id": "a6d90a604978",
+          "label": "Revised toward target",
+          "author": "",
+          "created": 1792695210
+        }
+      ],
+      "live": "a6d90a604978",
+      "raw": false
+    }
+  ],
+  "cuts": [],
+  "separator": false,
+  "rev": 7
+}

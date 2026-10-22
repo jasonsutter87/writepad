@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "id": "the-monkey-s-paw-screenplay",
+  "title": "The Monkey's Paw (screenplay)",
+  "blocks": [
+    {
+      "id": "198b96079df5",
+      "title": "Act One: Three wishes",
+      "variants": [
+        {
+          "id": "efcfb757975e",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        }
+      ],
+      "live": "efcfb757975e",
+      "raw": false
+    },
+    {
+      "id": "652055538604",
+      "title": "Act Two: Compensation",
+      "variants": [
+        {
+          "id": "85e708f4f0a5",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        }
+      ],
+      "live": "85e708f4f0a5",
+      "raw": false
+    },
+    {
+      "id": "d44c4cc755ca",
+      "title": "Act Three: The knocking",
+      "variants": [
+        {
+          "id": "eef1dc56f090",
+          "label": "Draft 1",
+          "author": "",
+          "created": 1792695209
+        }
+      ],
+      "live": "eef1dc56f090",
+      "raw": false
+    }
+  ],
+  "cuts": [],
+  "separator": false,
+  "rev": 1
+}

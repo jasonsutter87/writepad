@@ -1,9 +1,10 @@
-# Demo vault: The Monkey's Paw
+# Demo vault source
 
-A vault that shows everything WRITEpad does, built around W. W. Jacobs's
-*The Monkey's Paw* (1902, public domain). Download **WRITEpad-Demo-Vault.zip**
-from the [Releases](https://github.com/jasonsutter87/writepad/releases) page,
-unzip it, open the folder in **Settings → Vault**, and read **Start here**.
+**This folder builds the demo vault; it isn't the vault.** To try WRITEpad,
+open the repo's [`demo/`](../demo/) folder in **Settings → Vault**, or download
+**WRITEpad-Demo-Vault.zip** (with full history) from the
+[Releases](https://github.com/jasonsutter87/writepad/releases) page. Then read
+**Start here**.
 
 What's in it:
 
@@ -25,11 +26,12 @@ What's in it:
 
 ## Rebuilding it
 
-    python demo/build.py "path/to/WRITEpad Demo" --zip WRITEpad-Demo-Vault.zip
+    python demo-source/build.py --zip WRITEpad-Demo-Vault.zip
 
-Needs Rust. It
-builds the `writepad` CLI and `demo/helper` (history, cuts and the target,
-which the CLI doesn't expose), then writes everything through them.
+Needs Rust. It builds the `writepad` CLI and `demo-source/helper` (history,
+cuts and the target, which the CLI doesn't expose), writes the vault through
+them in a temp folder, zips it with its history, and replaces `demo/` with a
+copy (no `.git`). Commit `demo/` after rebuilding.
 
 - `src/Jacobs 1902.md`: the story (Project Gutenberg #12122), one `##` per scene
 - `src/Modern pass.md`: the revised *The first wish*

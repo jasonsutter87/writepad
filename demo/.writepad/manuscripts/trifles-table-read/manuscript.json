@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "id": "trifles-table-read",
+  "title": "Trifles (table read)",
+  "blocks": [
+    {
+      "id": "7a058ec0e7f6",
+      "title": "Front matter",
+      "variants": [
+        {
+          "id": "aa2d8eba83cf",
+          "label": "Trifles",
+          "author": "",
+          "created": 1792695210
+        }
+      ],
+      "live": "aa2d8eba83cf",
+      "raw": true
+    },
+    {
+      "id": "800c6d0fb224",
+      "title": "The kitchen",
+      "variants": [
+        {
+          "id": "894a9bfbc507",
+          "label": "Trifles",
+          "author": "",
+          "created": 1792695210
+        }
+      ],
+      "live": "894a9bfbc507",
+      "raw": false
+    },
+    {
+      "id": "9d99a08aac9d",
+      "title": "The quilt",
+      "variants": [
+        {
+          "id": "082fadadbdd5",
+          "label": "Trifles",
+          "author": "",
+          "created": 1792695210
+        }
+      ],
+      "live": "082fadadbdd5",
+      "raw": false
+    },
+    {
+      "id": "4929f95b13ca",
+      "title": "The bird",
+      "variants": [
+        {
+          "id": "da8b7f991111",
+          "label": "Trifles",
+          "author": "",
+          "created": 1792695210
+        }
+      ],
+      "live": "da8b7f991111",
+      "raw": false
+    }
+  ],
+  "cuts": [],
+  "separator": false,
+  "rev": 1
+}

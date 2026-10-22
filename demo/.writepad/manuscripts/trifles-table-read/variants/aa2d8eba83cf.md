@@ -1,0 +1,1 @@
+Susan Glaspell, *Trifles* (1916). Public domain. Laid out in Fountain for a table read.
