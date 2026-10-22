@@ -28,31 +28,30 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1b1a21;
-    --panel: #22212a;
-    --paper: #26252f;
-    --ink: #ebe6dc;
-    --muted: #9a94a6;
-    --line: #36343f;
-    --accent: #ea8b5e;
-    --accent-ink: #1b1a21;
-    --ins: 92, 205, 150;
-    --ghost-ink: #f08fb2;
-    --speak: rgba(234, 139, 94, 0.25);
-    --k-world: #3987e5;
-    --k-character: #d95926;
-    --k-location: #199e70;
-    --k-event: #c98500;
-    --k-relationship: #d55181;
-    --k-thing: #008300;
-    --k-scene: #9085e9;
-    --graph-surface: #1a1a19;
-    --desk: #141319;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9; --s-other: #6d6878;
-    color-scheme: dark;
-  }
+/* Dark palette. src/theme.ts sets data-theme from Settings (System follows the OS). */
+:root[data-theme="dark"] {
+  --bg: #1b1a21;
+  --panel: #22212a;
+  --paper: #26252f;
+  --ink: #ebe6dc;
+  --muted: #9a94a6;
+  --line: #36343f;
+  --accent: #ea8b5e;
+  --accent-ink: #1b1a21;
+  --ins: 92, 205, 150;
+  --ghost-ink: #f08fb2;
+  --speak: rgba(234, 139, 94, 0.25);
+  --k-world: #3987e5;
+  --k-character: #d95926;
+  --k-location: #199e70;
+  --k-event: #c98500;
+  --k-relationship: #d55181;
+  --k-thing: #008300;
+  --k-scene: #9085e9;
+  --graph-surface: #1a1a19;
+  --desk: #141319;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9; --s-other: #6d6878;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -262,9 +261,17 @@ dialog {
   background: var(--paper);
   color: var(--ink);
   width: min(520px, 90vw);
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 22px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
 }
+.theme-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.theme-presets button { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; font-size: 12px; }
+.theme-presets .chip { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.15); }
+.theme-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 6px; }
+.theme-colors label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.theme-colors input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
 dialog::backdrop { background: rgba(20, 18, 28, 0.35); }
 dialog h2 { margin: 0 0 6px; font: 600 18px var(--prose); }
 dialog .field input, dialog .field select { width: 100%; }

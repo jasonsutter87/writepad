@@ -1,7 +1,8 @@
 import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, type AudioSegment, type Block, type Book, type Cadence, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Settings, type Variant } from "./api";
+import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Settings, type ThemeMode, type Variant } from "./api";
+import { applyTheme, contrast, PRESETS } from "./theme";
 import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
 import { sentences, speakable } from "./sentences";
@@ -1948,13 +1949,21 @@ function wire() {
     $<HTMLInputElement>("set-whisper").value = settings.dictation_model;
     $<HTMLInputElement>("set-lang").value = settings.dictation_language;
     $<HTMLInputElement>("set-polish").checked = settings.dictation_polish;
+    themeDraft = { theme: settings.theme, custom_theme: { ...settings.custom_theme } };
+    showThemeDraft();
     renderVoices();
     dlgSettings.showModal();
   };
+  wireThemePicker();
   $("btn-set-vault").onclick = () => chooseVault().catch(fail);
   $("btn-setup-narration").onclick = () => setupNarration();
   dlgSettings.onclose = async () => {
-    if (dlgSettings.returnValue !== "ok") return;
+    if (dlgSettings.returnValue !== "ok") {
+      applyTheme(settings); // drop the preview
+      return;
+    }
+    settings.theme = themeDraft.theme;
+    settings.custom_theme = themeDraft.custom_theme;
     const before = `${settings.python}|${settings.model_dir}`;
     settings.python = $<HTMLInputElement>("set-python").value.trim();
     settings.model_dir = $<HTMLInputElement>("set-models").value.trim();
@@ -1974,8 +1983,58 @@ function wire() {
   window.addEventListener("beforeunload", flushSaves);
 }
 
+// ---------- theme (Settings → Appearance) ----------
+
+/** The theme being edited in Settings, previewed live until Save or Cancel. */
+let themeDraft: Pick<Settings, "theme" | "custom_theme">;
+const THEME_COLORS = ["sidebar", "background", "page", "text", "accent"] as const;
+
+function showThemeDraft() {
+  $<HTMLSelectElement>("set-theme").value = themeDraft.theme;
+  $("custom-theme").hidden = themeDraft.theme !== "custom";
+  const c = themeDraft.custom_theme;
+  $<HTMLSelectElement>("ct-base").value = c.base;
+  for (const k of THEME_COLORS) $<HTMLInputElement>(`ct-${k}`).value = c[k];
+  const ratio = contrast(c.text, c.page);
+  const warn = $("ct-contrast");
+  warn.hidden = themeDraft.theme !== "custom" || ratio >= 4.5;
+  warn.textContent = `Text on the page is ${ratio.toFixed(1)}:1. Below 4.5:1 it gets hard to read for long.`;
+  applyTheme(themeDraft);
+}
+
+function wireThemePicker() {
+  $<HTMLSelectElement>("set-theme").onchange = (e) => {
+    themeDraft.theme = (e.target as HTMLSelectElement).value as ThemeMode;
+    showThemeDraft();
+  };
+  $<HTMLSelectElement>("ct-base").onchange = (e) => {
+    themeDraft.custom_theme.base = (e.target as HTMLSelectElement).value as CustomTheme["base"];
+    showThemeDraft();
+  };
+  for (const k of THEME_COLORS) {
+    $<HTMLInputElement>(`ct-${k}`).oninput = (e) => {
+      themeDraft.custom_theme[k] = (e.target as HTMLInputElement).value;
+      showThemeDraft();
+    };
+  }
+  $("theme-presets").replaceChildren(
+    ...PRESETS.map((p) => {
+      const b = el("button", { type: "button", title: `Start from ${p.name}` });
+      const chip = el("span", { className: "chip" });
+      chip.style.background = `linear-gradient(135deg, ${p.theme.sidebar} 50%, ${p.theme.accent} 50%)`;
+      b.append(chip, p.name);
+      b.onclick = () => {
+        themeDraft.custom_theme = { ...p.theme };
+        showThemeDraft();
+      };
+      return b;
+    }),
+  );
+}
+
 async function main() {
   settings = await api.getSettings();
+  applyTheme(settings);
   wire();
   renderVoices();
   setMode("none");
