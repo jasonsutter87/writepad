@@ -22,6 +22,8 @@
   /* Library series: same validated palette, fixed order. */
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #6250d6; --s-other: #a29cab;
   --ui: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --desk: #e6e0d4;
   --prose: "Iowan Old Style", "Charter", "Palatino", Georgia, serif;
   color-scheme: light;
 }
@@ -47,6 +49,7 @@
     --k-thing: #008300;
     --k-scene: #9085e9;
     --graph-surface: #1a1a19;
+    --desk: #141319;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9; --s-other: #6d6878;
     color-scheme: dark;
   }
@@ -208,15 +211,15 @@ body:not(.has-ms) .for-ms { display: none; }
 
 #editor { flex: 1; min-height: 0; --ghost: 0.6; }
 body[data-mode="none"] #editor, body[data-mode="none"] .doc-head { display: none; }
-.cm-editor { height: 100%; background: var(--paper); color: var(--ink); }
-.cm-editor.cm-focused { outline: none; }
-.cm-scroller { font: 18px/1.7 var(--prose); padding: 28px 0 40vh; -webkit-user-select: text; user-select: text; }
-.cm-content { max-width: 720px; margin: 0 auto; padding: 0 48px; caret-color: var(--ink); }
-.cm-line { padding: 0; }
+#editor .cm-editor { height: 100%; background: var(--paper); color: var(--ink); }
+#editor .cm-editor.cm-focused { outline: none; }
+#editor .cm-scroller { font: 18px/1.7 var(--prose); padding: 28px 0 40vh; -webkit-user-select: text; user-select: text; }
+#editor .cm-content { max-width: 720px; margin: 0 auto; padding: 0 48px; caret-color: var(--ink); }
+#editor .cm-line { padding: 0; }
 /* Beats CodeMirror's own theme (black, or #ddd in its dark theme). */
-.cm-editor .cm-cursorLayer .cm-cursor, .cm-editor .cm-dropCursor { border-left: 2px solid var(--ink); }
-.cm-selectionBackground, .cm-focused .cm-selectionBackground { background: rgba(127, 127, 160, 0.25) !important; }
-.cm-placeholder { color: var(--muted); }
+#editor .cm-cursorLayer .cm-cursor, #editor .cm-dropCursor { border-left: 2px solid var(--ink); }
+#editor .cm-selectionBackground, #editor .cm-focused .cm-selectionBackground { background: rgba(127, 127, 160, 0.25) !important; }
+#editor .cm-placeholder { color: var(--muted); }
 
 /* onion skin */
 .wp-ins {
@@ -518,16 +521,16 @@ body:not([data-mode="block"]) #cadence { display: none; }
 .format-bar .sep { width: 1px; height: 14px; background: var(--line); margin: 0 6px; }
 .format-bar .hint { margin-left: 10px; }
 body:not([data-mode="block"]):not([data-mode="note"]) #format-bar { display: none; }
-.cm-line.fx-center { text-align: center; }
-.cm-line.fx-right { text-align: right; }
+#editor .cm-line.fx-center { text-align: center; }
+#editor .cm-line.fx-right { text-align: right; }
 
 /* Screenplay layout (Fountain), on a 60-character page */
-.wp-screenplay .cm-content { font-family: "Courier Prime", "Courier New", Courier, monospace; font-size: 15px; line-height: 1.5; max-width: calc(62ch + 96px); }
-.wp-screenplay .cm-line.fx-heading { font-weight: 700; text-transform: uppercase; padding-top: 0.6em; }
-.wp-screenplay .cm-line.fx-cue { padding-left: 22ch; }
-.wp-screenplay .cm-line.fx-paren { padding-left: 16ch; padding-right: 20ch; }
-.wp-screenplay .cm-line.fx-dialogue { padding-left: 10ch; padding-right: 14ch; }
-.wp-screenplay .cm-line.fx-transition { text-align: right; }
+#editor .wp-screenplay .cm-content { font-family: "Courier Prime", "Courier New", Courier, monospace; font-size: 15px; line-height: 1.5; max-width: calc(62ch + 96px); }
+#editor .wp-screenplay .cm-line.fx-heading { font-weight: 700; text-transform: uppercase; padding-top: 0.6em; }
+#editor .wp-screenplay .cm-line.fx-cue { padding-left: 22ch; }
+#editor .wp-screenplay .cm-line.fx-paren { padding-left: 16ch; padding-right: 20ch; }
+#editor .wp-screenplay .cm-line.fx-dialogue { padding-left: 10ch; padding-right: 14ch; }
+#editor .wp-screenplay .cm-line.fx-transition { text-align: right; }
 
 /* Cast */
 #cast .cast-pick { display: grid; grid-template-columns: 1fr 120px; gap: 6px; align-items: center; margin-bottom: 4px; font-size: 12px; }
@@ -535,3 +538,37 @@ body:not([data-mode="block"]):not([data-mode="note"]) #format-bar { display: non
 #cast .cast-pick .n { color: var(--muted); font-size: 11px; margin-left: 4px; }
 #cast select { width: 100%; }
 #cast .narrator { font-weight: 600; }
+
+/* New / Import */
+.ms-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+.ms-actions button { flex: 1; }
+#dlg-new .choice { display: grid; gap: 8px; margin: 12px 0 4px; }
+#dlg-new .choice label { display: flex; align-items: baseline; gap: 6px; }
+#dlg-new .choice .hint { margin: 0; }
+
+/* View switch: Page · Draft · Code */
+.view-switch { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 7px; padding: 1px; }
+.view-switch button { border-radius: 5px; color: var(--muted); }
+.view-switch button.active { background: var(--panel); color: var(--ink); font-weight: 600; }
+
+/* Page: a sheet on a desk */
+body[data-view="page"] #editor .cm-editor { background: var(--desk); }
+body[data-view="page"] #editor .cm-scroller { padding-top: 32px; }
+body[data-view="page"] #editor .cm-content {
+  max-width: 816px;
+  min-height: 1056px;
+  padding: 80px 96px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+@media (max-width: 1100px) { body[data-view="page"] #editor .cm-content { padding: 56px 48px; } }
+
+/* Code: monospace, line numbers, the current line marked */
+body[data-view="code"] #editor .cm-scroller { font: 14px/1.65 var(--mono); padding-top: 12px; }
+body[data-view="code"] #editor .cm-content,
+body[data-view="code"] #editor .wp-screenplay .cm-content { max-width: none; margin: 0; padding: 0 24px 0 8px; font: inherit; }
+body[data-view="code"] #editor .wp-screenplay .cm-line { padding-left: 6px; padding-right: 6px; }
+body[data-view="code"] #editor .cm-gutters { background: var(--paper); border-right: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+body[data-view="code"] #editor .cm-activeLine { background: rgba(127, 127, 127, 0.08); }
+body[data-view="code"] #editor .cm-activeLineGutter { background: rgba(127, 127, 127, 0.12); color: var(--ink); }

@@ -34,7 +34,10 @@
       </nav>
       <section id="pane-manuscripts" class="pane">
         <div id="ms-picker">
-          <button id="btn-import" class="wide">Import drafts, EPUB, PDF…</button>
+          <div class="ms-actions">
+            <button id="btn-new-ms" class="primary" title="Start a new manuscript or screenplay">New…</button>
+            <button id="btn-import" title="Import drafts, EPUB, PDF…">Import…</button>
+          </div>
           <ul id="list-manuscripts" class="list"></ul>
         </div>
         <div id="ms-outline" hidden>
@@ -88,6 +91,11 @@
           <button id="fmt-center" class="ghost" type="button" title="Center (⌘⇧E), saved as &gt; text &lt;">Center</button>
           <button id="fmt-right" class="ghost" type="button" title="Align right (⌘⇧R), saved as &gt;&gt; text">Right</button>
           <span id="fmt-script" class="hint"></span>
+          <span class="view-switch" role="group" aria-label="View">
+            <button class="ghost" type="button" data-view="page" title="Page: a sheet of paper, like a word processor">Page</button>
+            <button class="ghost" type="button" data-view="draft" title="Draft: just the words">Draft</button>
+            <button class="ghost" type="button" data-view="code" title="Code: monospace with line numbers">Code</button>
+          </span>
         </div>
       </div>
       <div id="editor"></div>
@@ -192,6 +200,21 @@
         <div class="actions">
           <button id="btn-export-close" value="cancel">Close</button>
           <button id="btn-do-export" type="button" class="primary">Export…</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-new">
+      <form method="dialog">
+        <h2>New</h2>
+        <label class="field">Title <input id="new-title" placeholder="Untitled" /></label>
+        <div class="choice">
+          <label><input type="radio" name="new-kind" value="ms" checked /> Manuscript <span class="hint">chapters of prose</span></label>
+          <label><input type="radio" name="new-kind" value="script" /> Screenplay <span class="hint">scenes, cues, dialogue; Tab changes a line's type</span></label>
+        </div>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button value="ok" class="primary">Create</button>
         </div>
       </form>
     </dialog>

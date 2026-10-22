@@ -3,8 +3,8 @@
 import { minimalSetup } from "codemirror";
 import { redo, undo } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
-import { EditorSelection, EditorState, Prec, StateEffect, StateField, type Extension, type Range } from "@codemirror/state";
-import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view";
+import { Compartment, EditorSelection, EditorState, Prec, StateEffect, StateField, type Extension, type Range } from "@codemirror/state";
+import { Decoration, EditorView, ViewPlugin, WidgetType, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import type { DiffOp } from "./api";
 import { classify, cycleLine, isScreenplay, type LineKind } from "./screenplay";
 
@@ -259,9 +259,17 @@ function linkAt(state: EditorState, pos: number): string | null {
   return null;
 }
 
+/** How the page looks: a sheet of paper, plain draft, or code with line numbers. */
+export type ViewMode = "page" | "draft" | "code";
+
+const viewExtensions = (mode: ViewMode): Extension =>
+  mode === "code" ? [lineNumbers(), highlightActiveLineGutter(), highlightActiveLine()] : [];
+
 export class Editor {
   readonly view: EditorView;
   private extensions: Extension[];
+  private viewConf = new Compartment();
+  private mode: ViewMode = "draft";
 
   constructor(parent: HTMLElement, hooks: EditorHooks) {
     this.extensions = [
@@ -304,7 +312,23 @@ export class Editor {
         },
       }),
     ];
-    this.view = new EditorView({ parent, state: EditorState.create({ extensions: this.extensions }) });
+    this.view = new EditorView({ parent, state: EditorState.create({ extensions: this.all() }) });
+  }
+
+  private all(): Extension[] {
+    return [...this.extensions, this.viewConf.of(viewExtensions(this.mode))];
+  }
+
+  setViewMode(mode: ViewMode) {
+    this.mode = mode;
+    this.view.dispatch({ effects: this.viewConf.reconfigure(viewExtensions(mode)) });
+  }
+
+  /** Put the cursor at the end and start typing there. */
+  focusEnd() {
+    const end = this.view.state.doc.length;
+    this.view.dispatch({ selection: { anchor: end }, scrollIntoView: true });
+    this.view.focus();
   }
 
   get text(): string {
@@ -313,7 +337,7 @@ export class Editor {
 
   /** Swap in a whole new document, with its own fresh undo history. */
   load(text: string) {
-    this.view.setState(EditorState.create({ doc: text, extensions: this.extensions }));
+    this.view.setState(EditorState.create({ doc: text, extensions: this.all() }));
   }
 
   setOnion(ops: DiffOp[] | null) {

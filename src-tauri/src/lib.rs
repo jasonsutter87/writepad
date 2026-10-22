@@ -487,6 +487,12 @@ fn delete_note(state: State<AppState>, path: String) -> Result<String, String> {
     world::delete_note(&state.vault()?, &path)
 }
 
+/// A blank manuscript or screenplay; returns its id.
+#[tauri::command]
+fn create_manuscript(state: State<AppState>, title: String, screenplay: bool) -> Result<String, String> {
+    manuscript::new_blank(&state.vault()?, &title, screenplay)
+}
+
 /// Move a whole manuscript to the trash (restorable with `restore_manuscript`).
 #[tauri::command]
 fn delete_manuscript(state: State<AppState>, id: String) -> Result<(), String> {
@@ -619,6 +625,7 @@ pub fn run() {
             world_move_event,
             world_delete_event,
             delete_note,
+            create_manuscript,
             delete_manuscript,
             restore_manuscript,
             restore_note,

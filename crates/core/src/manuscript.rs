@@ -694,6 +694,20 @@ pub fn from_sections(vault: &Path, title: &str, label: &str, sections: Vec<(Stri
     create(vault, title, blocks, vec![], false, None)
 }
 
+/// A new, empty manuscript (or a screenplay, which starts on its first scene).
+pub fn new_blank(vault: &Path, title: &str, screenplay: bool) -> Result<String, String> {
+    let title = title.trim();
+    if title.is_empty() {
+        return Err("Give it a title.".into());
+    }
+    let (section, text) = if screenplay {
+        ("Act One", "FADE IN:\n\nINT. LOCATION - DAY\n\n")
+    } else {
+        ("Chapter 1", "")
+    };
+    from_sections(vault, title, "draft_1", vec![(section.into(), text.into())])
+}
+
 /// One-time upgrade of a v1 manuscript (`<id>.json` with every take's text
 /// inline). The old file is kept as `<id>.json.v1`.
 fn migrate_v1(vault: &Path, id: &str) -> Result<(), String> {
@@ -753,6 +767,16 @@ mod tests {
         assert!(list(&vault).is_empty());
         restore_manuscript(&vault, &id).unwrap();
         assert_eq!(load(&vault, &id).unwrap().blocks[0].variants[0].text.trim(), "Hello.");
+    }
+
+    #[test]
+    fn new_blank_screenplay_starts_on_a_scene() {
+        let vault = temp_vault("new-blank");
+        let id = new_blank(&vault, "Pilot", true).unwrap();
+        let m = load(&vault, &id).unwrap();
+        assert_eq!(m.title, "Pilot");
+        assert!(m.blocks[0].variants[0].text.contains("INT. LOCATION - DAY"));
+        assert!(new_blank(&vault, "  ", false).is_err());
     }
 
     #[test]

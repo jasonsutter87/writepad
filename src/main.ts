@@ -2,7 +2,7 @@ import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, type AudioSegment, type Block, type Book, type Cadence, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Settings, type Variant } from "./api";
-import { Editor } from "./editor";
+import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
 import { sentences, speakable } from "./sentences";
 import { KINDS, renderGraph, renderTimeline, stopGraph, swatch } from "./world";
@@ -440,7 +440,7 @@ async function openManuscript(id: string) {
   $("ms-title").textContent = ms.title;
   renderCuts();
   const first = ms.blocks.find((b) => !b.raw) ?? ms.blocks[0];
-  if (first) openBlock(first.id);
+  if (first) await openBlock(first.id);
 }
 
 function closeManuscript() {
@@ -1351,6 +1351,34 @@ async function deleteManuscript(id: string, title: string) {
   });
 }
 
+/** A blank manuscript or screenplay, opened and ready to type in. */
+async function newManuscript() {
+  const dlg = $<HTMLDialogElement>("dlg-new");
+  const title = $<HTMLInputElement>("new-title");
+  title.value = "";
+  dlg.returnValue = "";
+  dlg.showModal();
+  title.focus();
+  const ok = await new Promise<boolean>((resolve) => (dlg.onclose = () => resolve(dlg.returnValue === "ok")));
+  if (!ok) return;
+  const screenplay = dlg.querySelector<HTMLInputElement>('input[name="new-kind"]:checked')?.value === "script";
+  const id = await api.createManuscript(title.value.trim() || (screenplay ? "Untitled screenplay" : "Untitled"), screenplay);
+  await loadManuscripts();
+  showTab("manuscripts");
+  await openManuscript(id);
+  editor.focusEnd();
+}
+
+/** Page, Draft or Code; remembered on this computer. */
+function setViewMode(mode: ViewMode) {
+  document.body.dataset.view = mode;
+  editor.setViewMode(mode);
+  document.querySelectorAll<HTMLButtonElement>(".view-switch button").forEach((b) => b.classList.toggle("active", b.dataset.view === mode));
+  try {
+    localStorage.setItem("wp-view", mode);
+  } catch {}
+}
+
 async function loadNotes() {
   notes = await api.listNotes();
   renderNotes();
@@ -1806,6 +1834,13 @@ function wire() {
   // Import
   const dlgImport = $<HTMLDialogElement>("dlg-import");
   let importPaths: string[] = [];
+  $("btn-new-ms").onclick = () => newManuscript().catch(fail);
+  document.querySelectorAll<HTMLButtonElement>(".view-switch button").forEach((b) => (b.onclick = () => setViewMode(b.dataset.view as ViewMode)));
+  let savedView: string | null = null;
+  try {
+    savedView = localStorage.getItem("wp-view");
+  } catch {}
+  setViewMode(savedView === "draft" || savedView === "code" ? savedView : "page");
   $("btn-import").onclick = () => {
     importPaths = [];
     $("import-files").replaceChildren();
