@@ -273,6 +273,7 @@ export const api = {
   renameTake: (manuscript: string, take: string, label: string) => invoke<Manuscript>("rename_take", { manuscript, take, label }),
   setBlockTitle: (manuscript: string, block: string, title: string) => invoke<Manuscript>("set_block_title", { manuscript, block, title }),
   setOrder: (manuscript: string, order: string[]) => invoke<Manuscript>("set_order", { manuscript, order }),
+  addBlock: (manuscript: string, title: string, after: string | null) => invoke<Manuscript>("add_block", { manuscript, title, after }),
   deleteBlock: (manuscript: string, block: string) => invoke<Manuscript>("delete_block", { manuscript, block }),
   cutOp: (manuscript: string, op: "save" | "apply" | "delete", name: string) => invoke<Manuscript>("cut_op", { manuscript, op, name }),
   importDrafts: (title: string, paths: string[]) => invoke<Manuscript>("import_drafts", { title, paths }),

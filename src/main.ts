@@ -503,6 +503,22 @@ function renderOutline() {
   list.querySelector("li.active")?.scrollIntoView({ block: "nearest" });
 }
 
+/** A new chapter after the one being edited, opened and ready to type. */
+async function addChapter() {
+  if (!ms) return;
+  flushSaves();
+  const script = ms.blocks.some((b) => b.title.startsWith("Act ") || b.title.startsWith("Scene "));
+  const word = script ? "Scene" : "Chapter";
+  const n = ms.blocks.filter((b) => !b.raw).length + 1;
+  const before = new Set(ms.blocks.map((b) => b.id));
+  const after = doc?.kind === "block" ? doc.blockId : null;
+  ms = await api.addBlock(ms.id, `${word} ${n}`, after);
+  const added = ms.blocks.find((b) => !before.has(b.id));
+  if (added) openBlock(added.id);
+  editor.focusEnd();
+  loadManuscripts().catch(() => {});
+}
+
 function moveBlock(id: string, targetId: string, after: boolean) {
   if (!ms || id === targetId) return;
   const order = ms.blocks.map((b) => b.id).filter((b) => b !== id);
@@ -1834,6 +1850,7 @@ function wire() {
   // Import
   const dlgImport = $<HTMLDialogElement>("dlg-import");
   let importPaths: string[] = [];
+  $("btn-add-block").onclick = () => addChapter().catch(fail);
   $("btn-new-ms").onclick = () => newManuscript().catch(fail);
   document.querySelectorAll<HTMLButtonElement>(".view-switch button").forEach((b) => (b.onclick = () => setViewMode(b.dataset.view as ViewMode)));
   let savedView: string | null = null;

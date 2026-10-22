@@ -161,6 +161,12 @@ fn set_order(state: State<AppState>, manuscript: String, order: Vec<String>) -> 
     changed(&state, &manuscript, |v| manuscript::set_order(v, &manuscript, &order))
 }
 
+/// A new, empty chapter after `after` (or at the end).
+#[tauri::command]
+fn add_block(state: State<AppState>, manuscript: String, title: String, after: Option<String>) -> Result<Manuscript, String> {
+    changed(&state, &manuscript, |v| manuscript::add_block(v, &manuscript, &title, after.as_deref(), "", "").map(|_| ()))
+}
+
 #[tauri::command]
 fn delete_block(state: State<AppState>, manuscript: String, block: String) -> Result<Manuscript, String> {
     changed(&state, &manuscript, |v| manuscript::delete_block(v, &manuscript, &block))
@@ -595,6 +601,7 @@ pub fn run() {
             rename_take,
             set_block_title,
             set_order,
+            add_block,
             delete_block,
             cut_op,
             import_drafts,

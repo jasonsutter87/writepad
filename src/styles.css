@@ -572,3 +572,5 @@ body[data-view="code"] #editor .wp-screenplay .cm-line { padding-left: 6px; padd
 body[data-view="code"] #editor .cm-gutters { background: var(--paper); border-right: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 body[data-view="code"] #editor .cm-activeLine { background: rgba(127, 127, 127, 0.08); }
 body[data-view="code"] #editor .cm-activeLineGutter { background: rgba(127, 127, 127, 0.12); color: var(--ink); }
+#btn-add-block { margin-top: 8px; color: var(--muted); border-style: dashed; }
+#btn-add-block:hover { color: var(--ink); }
