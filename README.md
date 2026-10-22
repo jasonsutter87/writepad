@@ -249,6 +249,29 @@ under `world/` (Obsidian-compatible frontmatter):
 - Agents: `world`, `world_entry`, `scene_cast`, `timeline`, `world_add`,
   `timeline_add`. What they add arrives as `status: draft`.
 
+### Filling in the world without AI
+
+**World → Suggest…** reads a manuscript with plain rules and lists the
+characters and locations it finds, each with how often and where. Untick the
+ones you don't want; the rest become drafts in World to keep, edit or delete.
+
+- **Screenplays** are exact: the names above dialogue are the characters, and
+  scene headings are the places (`INT. WRIGHT FARMHOUSE - KITCHEN` → Wright
+  Farmhouse).
+- **Prose** is rules, not a model: capitalised names that recur away from the
+  start of a sentence or carry a title (Mrs., Sergeant-Major, St.), who "said"
+  what, and places after in/at/to or named like one (Laburnam Villa). Variants
+  merge (Herbert → Herbert White, Morris → Sergeant-Major Morris); "Mr. White"
+  stays apart from "Herbert White", since families share surnames. Roles like
+  "the old man" aren't found.
+- **Also start a timeline** adds one draft event per scene, in order, to rename.
+
+**World → Import CSV…** takes a spreadsheet with a header row
+`type,name,aliases,description` (aliases separated by `;`; types character,
+location, thing) and makes a note for each row.
+
+Agents and the CLI: `world_suggest`, `world_suggest_apply`, `world_import_csv`.
+
 ## History (git)
 
 Snapshots are commits in the vault's own git repository (*Turn on history*

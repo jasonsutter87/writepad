@@ -272,6 +272,10 @@ dialog {
 .theme-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 6px; }
 .theme-colors label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .theme-colors input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+.suggest-list { max-height: 46vh; overflow-y: auto; margin: 4px 0 10px; }
+.suggest-list .dialog-section { margin: 12px 0 6px; }
+.suggest-item { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: baseline; padding: 4px 2px; cursor: pointer; }
+.suggest-item .meta { grid-column: 2; color: var(--muted); font-size: 12px; }
 dialog::backdrop { background: rgba(20, 18, 28, 0.35); }
 dialog h2 { margin: 0 0 6px; font: 600 18px var(--prose); }
 dialog .field input, dialog .field select { width: 100%; }

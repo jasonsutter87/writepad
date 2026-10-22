@@ -248,7 +248,7 @@ fn words(t: &str) -> u32 {
     profile::count_words(t) as u32
 }
 
-fn split_heading(h: &str) -> (String, String, String) {
+pub(crate) fn split_heading(h: &str) -> (String, String, String) {
     let u = h.to_uppercase();
     let place = if u.starts_with("INT/EXT") || u.starts_with("INT./EXT") || u.starts_with("I/E") || u.starts_with("E/I") || u.starts_with("EXT/INT") {
         "INT/EXT"

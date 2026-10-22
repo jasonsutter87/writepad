@@ -19,6 +19,25 @@ export interface Settings {
   custom_theme: CustomTheme;
 }
 
+/** A character or location found in a manuscript by plain rules (crates/core/src/suggest.rs). */
+export interface WorldSuggestion {
+  kind: "character" | "location";
+  name: string;
+  aliases: string[];
+  mentions: number;
+  scenes: string[];
+  why: string;
+}
+
+export interface WorldSuggestions {
+  manuscript: string;
+  title: string;
+  screenplay: boolean;
+  characters: WorldSuggestion[];
+  locations: WorldSuggestion[];
+  scenes: string[];
+}
+
 export type ThemeMode = "system" | "light" | "dark" | "custom";
 
 export interface CustomTheme {
@@ -329,6 +348,10 @@ export const api = {
   scriptsReport: () => invoke<ScriptSummary[]>("scripts_report"),
   adaptation: (book: string, scriptId: string) => invoke<Adaptation>("adaptation", { book, scriptId }),
   worldAdd: (kind: string, name: string) => invoke<string>("world_add", { kind, name }),
+  worldSuggest: (manuscript: string) => invoke<WorldSuggestions>("world_suggest", { manuscript }),
+  worldSuggestApply: (manuscript: string, picks: WorldSuggestion[], timeline: boolean) =>
+    invoke<string[]>("world_suggest_apply", { manuscript, picks, timeline }),
+  worldImportCsv: (path: string) => invoke<{ created: string[]; skipped: string[] }>("world_import_csv", { path }),
   worldInsertEvent: (name: string, after: string | null, before: string | null, when: string | null, scene: [string, string] | null) =>
     invoke<string>("world_insert_event", { name, after, before, when, scene }),
   worldMoveEvent: (path: string, after: string | null, before: string | null) => invoke<void>("world_move_event", { path, after, before }),
