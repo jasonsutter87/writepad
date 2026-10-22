@@ -1,0 +1,21 @@
+[package]
+name = "writepad-core"
+version = "0.1.0"
+edition = "2021"
+description = "WRITEpad's engine: manuscripts, takes, history, import and export. Shared by the app, the CLI and the MCP server."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+similar = "2"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+walkdir = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+roxmltree = "0.20"
+pdf-extract = "0.12"
+git2 = { version = "0.21", default-features = false }
+hound = "3.5"
+mp3lame-encoder = "0.2"
+serde_yaml = "0.9"
+ureq = "3.4"

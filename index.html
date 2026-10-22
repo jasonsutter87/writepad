@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WRITEpad</title>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body data-mode="none">
+    <header class="topbar" data-tauri-drag-region>
+      <div class="brand"><b>WRITE</b>pad</div>
+      <button id="btn-vault" class="ghost" title="Open a vault folder">No vault</button>
+      <div class="spacer" data-tauri-drag-region></div>
+      <span id="now-playing"></span>
+      <div class="narration">
+        <button id="btn-dictate" title="Dictate at the cursor. Hold Right ⌥ and talk, or tap it to go hands-free.">🎙 Dictate</button>
+        <button id="btn-play" class="primary" title="Listen from the cursor, or to the selection (⌘↵). Esc stops.">▶ Listen</button>
+        <select id="sel-voice" title="Narrator voice"></select>
+        <label class="speed" title="Speed">
+          <input id="rng-speed" type="range" min="0.7" max="1.4" step="0.05" />
+          <span id="lbl-speed">1.00×</span>
+        </label>
+      </div>
+      <button id="btn-export-open" class="ghost" title="Export as Markdown, text, EPUB, PDF or MP3">Export</button>
+      <button id="btn-settings" class="ghost" title="Settings">Settings</button>
+    </header>
+
+    <aside class="sidebar">
+      <nav class="tabs">
+        <button data-tab="manuscripts" class="active">Manuscripts</button>
+        <button data-tab="notes">Notes</button>
+        <button data-tab="world">World</button>
+        <button data-tab="library">Library</button>
+      </nav>
+      <section id="pane-manuscripts" class="pane">
+        <div id="ms-picker">
+          <button id="btn-import" class="wide">Import drafts, EPUB, PDF…</button>
+          <ul id="list-manuscripts" class="list"></ul>
+        </div>
+        <div id="ms-outline" hidden>
+          <div class="outline-head">
+            <button id="btn-back" class="ghost" title="All manuscripts">‹</button>
+            <span id="ms-title"></span>
+          </div>
+          <ul id="outline" class="list outline"></ul>
+        </div>
+      </section>
+      <section id="pane-world" class="pane" hidden>
+        <div class="row world-views">
+          <button id="btn-graph" type="button">Graph</button>
+          <button id="btn-timeline" type="button">Timeline</button>
+        </div>
+        <div id="world-groups"></div>
+        <details id="world-issues" hidden>
+          <summary></summary>
+          <ul class="list"></ul>
+        </details>
+      </section>
+      <section id="pane-library" class="pane" hidden>
+        <div class="row world-views">
+          <button id="btn-library-add" type="button">Add books…</button>
+          <button id="btn-library-open" type="button">Compare</button>
+        </div>
+        <ul id="library-books" class="list"></ul>
+        <p class="hint">Weight books to blend them into your target. Only the numbers are kept, never the text.</p>
+        <div class="world-group-head scripts-head"><span class="count">Scripts</span><button id="btn-script-add" class="ghost" type="button" title="Add a screenplay">+</button></div>
+        <ul id="library-scripts" class="list"></ul>
+      </section>
+      <section id="pane-notes" class="pane" hidden>
+        <button id="btn-new-note" class="wide">New note</button>
+        <ul id="list-notes" class="list"></ul>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div class="doc-head">
+        <div class="title-row">
+          <input id="doc-title" spellcheck="false" />
+          <span id="note-actions"></span>
+        </div>
+        <div id="variants" class="variants"></div>
+        <div id="cadence" class="cadence"></div>
+        <div id="format-bar" class="format-bar">
+          <button id="fmt-b" class="ghost" type="button" title="Bold (⌘B)"><b>B</b></button>
+          <button id="fmt-i" class="ghost" type="button" title="Italic (⌘I)"><i>I</i></button>
+          <span class="sep"></span>
+          <button id="fmt-left" class="ghost" type="button" title="Align left (⌘⇧L)">Left</button>
+          <button id="fmt-center" class="ghost" type="button" title="Center (⌘⇧E), saved as &gt; text &lt;">Center</button>
+          <button id="fmt-right" class="ghost" type="button" title="Align right (⌘⇧R), saved as &gt;&gt; text">Right</button>
+          <span id="fmt-script" class="hint"></span>
+        </div>
+      </div>
+      <div id="editor"></div>
+      <div id="graph-view" class="view" hidden></div>
+      <div id="timeline-view" class="view" hidden></div>
+      <div id="library-view" class="view" hidden></div>
+      <div id="empty" class="empty">
+        <h1><b>WRITE</b>pad</h1>
+        <p id="empty-msg">Open a vault folder to begin. Any folder of markdown works, including an Obsidian vault.</p>
+        <button id="btn-empty-vault" class="primary">Open vault…</button>
+      </div>
+    </main>
+
+    <aside class="inspector">
+      <section class="for-doc">
+        <h3>Onion skin</h3>
+        <label class="field">Compare with <select id="sel-compare"></select></label>
+        <label class="field">Ghost <input id="rng-ghost" type="range" min="0" max="100" /></label>
+        <div id="diff-stats" class="hint"></div>
+        <button id="btn-ab" class="wide">A/B listen</button>
+        <p class="hint">Plays the compared version, then this one.</p>
+      </section>
+      <section id="cast-section" class="for-doc" hidden>
+        <h3>Cast</h3>
+        <p class="hint">Who reads which part in a table read (▶ Listen). The narrator reads headings and action.</p>
+        <div id="cast"></div>
+        <button id="btn-recast" class="wide" type="button">Recast everyone</button>
+      </section>
+      <section class="block-only">
+        <h3>In this scene</h3>
+        <div id="scene-cast"></div>
+        <button id="btn-event-here" class="wide" type="button">+ Event here</button>
+      </section>
+      <section id="connections-section" hidden>
+        <h3>Connections</h3>
+        <div id="connections"></div>
+      </section>
+      <section class="for-ms">
+        <h3>Cuts</h3>
+        <ul id="list-cuts" class="list"></ul>
+        <div class="row">
+          <input id="cut-name" placeholder="Name this cut" />
+          <button id="btn-save-cut">Save</button>
+        </div>
+      </section>
+      <section class="for-doc">
+        <h3>History</h3>
+        <div id="history-off" hidden>
+          <p class="hint">Keep every version of this vault: compare any past version, restore it, or roll everything back. Uses git, so it works with any git tool.</p>
+          <button id="btn-history-on" class="wide">Turn on history</button>
+        </div>
+        <div id="history-on" hidden>
+          <div class="row">
+            <input id="snap-msg" placeholder="Describe this version" />
+            <button id="btn-snap" title="Save a snapshot of the whole vault">Save</button>
+          </div>
+          <label class="check"><input id="chk-autosave" type="checkbox" /> Autosave every 10 minutes</label>
+          <ul id="history-list" class="list history"></ul>
+        </div>
+      </section>
+      <section>
+        <h3>Pronunciations</h3>
+        <ul id="lexicon" class="list lexicon"></ul>
+        <div class="row">
+          <input id="lex-word" placeholder="Werbos" />
+          <input id="lex-say" placeholder="WER-bose" />
+          <button id="btn-lex-add" title="Add">+</button>
+        </div>
+        <p class="hint">Respell it, or give IPA between slashes.</p>
+      </section>
+    </aside>
+
+    <div id="toast"></div>
+
+    <dialog id="dlg-import">
+      <form method="dialog">
+        <h2>Import</h2>
+        <p class="hint">Pick every draft of one script (markdown, EPUB or PDF). An EPUB becomes one block per chapter; a PDF splits on its headings. Sections with the same <code>##</code> heading line up as variants, oldest first. The newest draft becomes live.</p>
+        <button id="btn-pick-files" type="button">Choose files…</button>
+        <ol id="import-files"></ol>
+        <label class="field">Title <input id="import-title" /></label>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button id="btn-do-import" type="button" class="primary">Import</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-export">
+      <form method="dialog">
+        <h2>Export</h2>
+        <p id="export-what" class="hint"></p>
+        <div class="formats">
+          <label><input type="radio" name="fmt" value="epub" checked /> EPUB <span class="hint">e-readers</span></label>
+          <label><input type="radio" name="fmt" value="pdf" /> PDF <span class="hint">print-ready, 5.5×8.5″</span></label>
+          <label><input type="radio" name="fmt" value="md" /> Markdown</label>
+          <label><input type="radio" name="fmt" value="txt" /> Plain text</label>
+          <label><input type="radio" name="fmt" value="mp3" /> MP3 audiobook <span class="hint">one file per chapter, narrated; a screenplay gets its cast's voices</span></label>
+        </div>
+        <label class="field">Author <input id="export-author" placeholder="Your name" /></label>
+        <div id="export-progress" class="hint"></div>
+        <div class="actions">
+          <button id="btn-export-close" value="cancel">Close</button>
+          <button id="btn-do-export" type="button" class="primary">Export…</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-script">
+      <form method="dialog">
+        <h2>Add a screenplay</h2>
+        <p class="hint">Paste a link to a script page (IMSDb works), or pick a .txt, .fountain or .pdf. WRITEpad measures it and keeps only the numbers.</p>
+        <label class="field">Link <input id="script-url" placeholder="https://imsdb.com/scripts/…" spellcheck="false" /></label>
+        <div class="row"><button id="btn-script-file" type="button">Choose a file…</button><span id="script-file" class="hint"></span></div>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button value="ok" class="primary">Add</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-world">
+      <form method="dialog">
+        <h2 id="world-dlg-title">New</h2>
+        <label class="field" id="world-kind-field">Type
+          <select id="world-kind">
+            <option value="character">Character</option>
+            <option value="location">Location</option>
+            <option value="relationship">Relationship</option>
+            <option value="thing">Thing</option>
+            <option value="world">World overview</option>
+          </select>
+        </label>
+        <label class="field">Name <input id="world-name" placeholder="June" /></label>
+        <label class="field" id="world-when-field">When <span class="hint">(in-story time, optional)</span> <input id="world-when" placeholder="Fri Apr 26 2041, 8:14am" /></label>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button value="ok" class="primary">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-note">
+      <form method="dialog">
+        <h2>New note</h2>
+        <label class="field">Name <input id="note-name" placeholder="ideas/Unit 12" /></label>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button id="btn-do-note" value="ok" class="primary">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-settings">
+      <form method="dialog">
+        <h2>Settings</h2>
+        <label class="field">Vault <span class="row"><input id="set-vault" readonly /><button id="btn-set-vault" type="button">Change…</button></span></label>
+        <label class="field">Python with kokoro-onnx <input id="set-python" spellcheck="false" /></label>
+        <label class="field">Kokoro model folder <input id="set-models" spellcheck="false" /></label>
+        <label class="field">Voice for <i>italic</i> lines <select id="set-italic"></select></label>
+        <label class="field">Pause after paragraphs (seconds) <input id="set-pause" type="number" min="0" max="3" step="0.05" /></label>
+        <h3 class="dialog-section">Dictation</h3>
+        <label class="field">Whisper model (shared with murmur) <input id="set-whisper" spellcheck="false" placeholder="small" /></label>
+        <label class="field">Language <input id="set-lang" spellcheck="false" placeholder="en, es, or auto" /></label>
+        <label class="check"><input id="set-polish" type="checkbox" /> Polish with Claude: drop ums and fix punctuation, keep every word</label>
+        <div class="actions">
+          <button value="cancel">Cancel</button>
+          <button id="btn-save-settings" value="ok" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

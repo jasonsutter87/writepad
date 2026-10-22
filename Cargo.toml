@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/cli", "src-tauri"]
+
+# Same patched whisper.cpp build as murmur (target-aware BLAS, Android NDK fixes).
+[patch.crates-io]
+whisper-rs-sys = { path = "../murmur/vendor/whisper-rs-sys" }
+
+# Keep debug builds small: full debug info only for our own crates.
+[profile.dev.package."*"]
+debug = false

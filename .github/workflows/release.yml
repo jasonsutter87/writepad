@@ -1,0 +1,74 @@
+# Builds WRITEpad for macOS (Apple Silicon and Intel) and Windows, and attaches
+# the installers to a GitHub release. Runs when a version tag is pushed
+# (git tag v0.1.0 && git push --tags), or by hand from the Actions tab.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macOS (Apple Silicon)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: macOS (Intel)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      # WRITEpad builds dictation from murmur, which it expects next door (../murmur).
+      - uses: actions/checkout@v4
+        with:
+          path: writepad
+      - uses: actions/checkout@v4
+        with:
+          repository: jasonsutter87/murmur
+          path: murmur
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: writepad/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: writepad -> target
+          key: ${{ matrix.target }}
+
+      - name: Install JS dependencies
+        working-directory: writepad
+        run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: writepad
+          args: --target ${{ matrix.target }}
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
+          releaseName: WRITEpad ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
+          releaseBody: |
+            **Mac:** download the `.dmg` (`aarch64` for Apple Silicon, `x64` for Intel). The app isn't signed by Apple yet, so the first time: open it, then System Settings → Privacy & Security → **Open Anyway**.
+            **Windows:** download the `.msi` or `-setup.exe`. SmartScreen may warn because it's unsigned: **More info → Run anyway**.
+
+            Narration needs Python with Kokoro; see the README.
+          releaseDraft: false
+          prerelease: false
