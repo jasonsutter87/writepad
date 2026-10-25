@@ -1,0 +1,587 @@
+// ==========================================================================
+// HOME PAGE STYLES
+// Per-page SCSS - use your mixins and variables!
+// ==========================================================================
+
+// SCSS imports MUST come first
+@use '../shared/variables' as *;
+@use '../shared/mixins' as *;
+
+// Tailwind
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Home, pricing and download page styles
+.home-hero {
+  @include flex-column;
+  padding: 3rem 0 4rem;
+
+  @include lg {
+    padding: 5rem 0 6rem;
+  }
+
+  .hero-content {
+    text-align: center;
+
+    @include lg {
+      text-align: left;
+    }
+  }
+
+  &__title {
+    font-size: 2.6rem;
+    margin-bottom: 1.25rem;
+
+    @include md { font-size: 3.4rem; }
+    @include xl { font-size: 3.9rem; }
+  }
+
+  &__lede {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 34rem;
+    margin: 0 auto;
+
+    @include lg { margin: 0; }
+  }
+}
+
+.home-section {
+  padding: 4.5rem 0;
+
+  @include lg { padding: 6rem 0; }
+
+  &__title {
+    font-size: 2rem;
+    max-width: 40rem;
+    margin-bottom: 1rem;
+
+    @include md { font-size: 2.5rem; }
+  }
+
+  &__lede {
+    font-size: 1.1rem;
+    max-width: 40rem;
+  }
+}
+
+.home-band {
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.home-cta {
+  background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
+}
+
+// --------------------------------------------------------------------------
+// Editor drawing in the hero
+// --------------------------------------------------------------------------
+
+.mock {
+  margin: 0;
+  background: var(--desk);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 30px 60px -30px rgb(35 33 43 / 0.45);
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-align: left;
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.6rem 0.8rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+
+  &__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+
+  &__title {
+    margin-left: 0.6rem;
+    color: var(--muted);
+    font-weight: $font-weight-medium;
+  }
+
+  &__body { display: flex; }
+
+  &__outline {
+    display: none;
+    width: 34%;
+    padding: 1rem 0.75rem;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+
+    @include sm { display: block; }
+  }
+
+  &__label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  &__block {
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    margin-bottom: 0.15rem;
+    color: var(--muted);
+    @include text-truncate;
+
+    &.is-active {
+      background: var(--paper);
+      color: var(--ink);
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &__page {
+    flex: 1;
+    margin: 0.9rem;
+    padding: 1.1rem 1.25rem;
+    background: var(--paper);
+    border-radius: 8px;
+    box-shadow: $shadow;
+  }
+
+  &__takes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.9rem;
+  }
+
+  &__take {
+    padding: 0.15rem 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+
+    &.is-live {
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__ghost-ctl {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    color: var(--muted);
+  }
+
+  &__slider {
+    position: relative;
+    width: 54px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+
+    span {
+      position: absolute;
+      left: 60%;
+      top: -4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+  }
+
+  &__prose {
+    font-family: $font-family-serif;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    margin: 0;
+
+    ins {
+      text-decoration: none;
+      background: rgba(var(--ins), 0.18);
+      box-shadow: inset 0 -2px 0 rgba(var(--ins), 0.55);
+      border-radius: 2px;
+    }
+
+    del {
+      color: var(--ghost);
+      opacity: 0.55;
+      text-decoration: line-through;
+      text-decoration-color: color-mix(in srgb, var(--ghost) 50%, transparent);
+    }
+  }
+
+  &__strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+
+    span:first-child { color: var(--accent); font-weight: $font-weight-semibold; }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Features
+// --------------------------------------------------------------------------
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+
+  @include md {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include lg {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.feature-card {
+  @include card;
+  box-shadow: none;
+  transition: transform $transition-base, box-shadow $transition-base;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $shadow-lg;
+  }
+
+  &__icon {
+    @include flex-center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    border-radius: $border-radius-lg;
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    font-family: $font-family-sans;
+    @include heading(1.1rem, $font-weight-semibold);
+    letter-spacing: 0;
+    margin-bottom: 0.4rem;
+  }
+
+  &__description {
+    color: var(--muted);
+  }
+}
+
+.check-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    position: relative;
+    padding-left: 1.9rem;
+    margin-bottom: 1rem;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.3em;
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--accent) 18%, transparent)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d9774a' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4 8-9'/%3E%3C/svg%3E")
+        center / 70% no-repeat;
+    }
+  }
+
+  &--compact li { margin-bottom: 0.6rem; }
+
+  code {
+    font-family: $font-family-mono;
+    font-size: 0.9em;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Pricing
+// --------------------------------------------------------------------------
+
+.pricing {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 54rem;
+  margin-left: auto;
+  margin-right: auto;
+
+  @include md { grid-template-columns: 1fr 1fr; }
+}
+
+.price-card {
+  @include card(2rem);
+  @include flex-column;
+  position: relative;
+
+  &--featured {
+    border: 2px solid var(--accent);
+    box-shadow: 0 20px 40px -24px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+
+  &__tag {
+    position: absolute;
+    top: -0.8rem;
+    right: 1.5rem;
+    padding: 0.15rem 0.7rem;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__name {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  &__price {
+    font-family: $font-family-serif;
+    font-size: 2.6rem;
+    font-weight: $font-weight-semibold;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+
+    span { font-family: $font-family-sans; font-size: 1rem; font-weight: $font-weight-normal; }
+  }
+
+  .check-list { margin: 1rem 0 1.75rem; }
+}
+
+// --------------------------------------------------------------------------
+// FAQ
+// --------------------------------------------------------------------------
+
+.faq {
+  border-top: 1px solid var(--line);
+
+  &__item {
+    border-bottom: 1px solid var(--line);
+
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 1.1rem 2rem 1.1rem 0;
+      position: relative;
+      font-weight: $font-weight-semibold;
+      font-size: 1.08rem;
+
+      &::-webkit-details-marker { display: none; }
+
+      &::after {
+        content: "+";
+        position: absolute;
+        right: 0.25rem;
+        top: 0.9rem;
+        font-size: 1.4rem;
+        color: var(--accent);
+      }
+    }
+
+    &[open] summary::after { content: "–"; }
+  }
+
+  &__answer {
+    padding-bottom: 1.25rem;
+    color: var(--muted);
+
+    p { margin: 0; }
+    a { color: var(--accent); }
+  }
+}
+
+.faq-aside {
+  @include lg {
+    position: sticky;
+    top: 6rem;
+    padding-right: 2rem;
+  }
+}
+
+// A stack of takes behind the app icon, like versions piled on the desk
+.ask-card {
+  @include card(1.75rem);
+  box-shadow: none;
+  background:
+    radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+    var(--paper);
+
+  &__sheets {
+    position: relative;
+    width: 96px;
+    height: 88px;
+    margin-bottom: 1.25rem;
+
+    span {
+      position: absolute;
+      left: 12px;
+      top: 8px;
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      transform: rotate(-12deg);
+    }
+
+    span + span {
+      left: 20px;
+      transform: rotate(9deg);
+      background: color-mix(in srgb, var(--accent) 22%, var(--paper));
+    }
+
+    img {
+      position: absolute;
+      left: 12px;
+      top: 8px;
+      border-radius: 16px;
+      box-shadow: 0 12px 24px -12px rgb(0 0 0 / 0.5);
+    }
+  }
+
+  &__title {
+    font-size: 1.4rem;
+    margin-bottom: 0.4rem;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Download
+// --------------------------------------------------------------------------
+
+.download-grid {
+  display: grid;
+  gap: 1.25rem;
+
+  @include md { grid-template-columns: repeat(3, 1fr); }
+}
+
+.download-card {
+  @include card(1.75rem);
+  @include flex-column;
+
+  &__os {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .muted { flex-grow: 1; }
+}
+
+// --------------------------------------------------------------------------
+// Contact
+// --------------------------------------------------------------------------
+
+.contact-form {
+  .field {
+    display: block;
+    margin-bottom: 1.1rem;
+    font-weight: $font-weight-medium;
+
+    .muted { font-weight: $font-weight-normal; font-size: 0.9em; }
+  }
+
+  input, select, textarea {
+    display: block;
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    font-weight: $font-weight-normal;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: $border-radius-lg;
+
+    &:focus { border-color: var(--accent); }
+  }
+
+  textarea { resize: vertical; min-height: 9rem; }
+
+  button[disabled] { opacity: 0.6; cursor: wait; }
+}
+
+// Off-screen rather than display:none, which some bots know to skip
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.form-status {
+  padding: 0.8rem 1rem;
+  border-radius: $border-radius-lg;
+  border: 1px solid var(--line);
+  margin-bottom: 1.25rem;
+
+  &.is-ok { border-color: rgba(var(--ins), 0.6); background: rgba(var(--ins), 0.12); }
+  &.is-error { border-color: var(--ghost); background: color-mix(in srgb, var(--ghost) 12%, transparent); }
+}
+
+// --------------------------------------------------------------------------
+// Motion (js/pages/home.js)
+// --------------------------------------------------------------------------
+
+// Rotating headlines, stacked in one cell so the heading keeps the height of
+// its longest line while they cross-fade.
+.hero-rotator {
+  display: grid;
+
+  > span {
+    grid-area: 1 / 1;
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity 0.7s ease, filter 0.7s ease;
+
+    &.is-on {
+      opacity: 1;
+      filter: none;
+    }
+  }
+}
+
+// The script adds .motion to <html> only when it runs and motion is allowed,
+// so without it everything is simply visible. After rising, an element gets
+// .is-done and its own transitions (card hover) apply again.
+.motion {
+  :is(.hero-media, .feature-card, .home-band .check-list > li, .price-card, .ask-card, .faq__item):not(.is-done) {
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  :is(.hero-media, .feature-card, .home-band .check-list > li, .price-card, .ask-card, .faq__item):not(.is-in):not(.is-done) {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  .hero-media .mock,
+  .ask-card__sheets img,
+  .price-card__tag {
+    will-change: transform;
+  }
+}

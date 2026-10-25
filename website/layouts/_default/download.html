@@ -1,0 +1,57 @@
+{{ define "main" }}
+{{ $releases := .Site.Params.releasesURL }}
+<section class="page-hero">
+  <div class="container">
+    <p class="eyebrow mb-2">Download</p>
+    <h1>Get WRITEpad</h1>
+    <p class="muted mt-2 mb-0">Free and open source. Latest version <span data-release-version>{{ .Site.Params.version }}</span>.</p>
+  </div>
+</section>
+
+<section class="pb-5">
+  <div class="container">
+    <div class="download-grid">
+      <article class="download-card">
+        <h2 class="download-card__os">Mac</h2>
+        <p class="muted">macOS 11 or later, Apple Silicon or Intel.</p>
+        <a href="{{ $releases }}" target="_blank" rel="noopener" class="wp-btn wp-btn--primary w-full" data-asset="_aarch64.dmg">Apple Silicon (M1 and later)</a>
+        <a href="{{ $releases }}" target="_blank" rel="noopener" class="wp-btn wp-btn--ghost w-full mt-2" data-asset="_x64.dmg">Intel</a>
+      </article>
+      <article class="download-card">
+        <h2 class="download-card__os">Windows</h2>
+        <p class="muted">Windows 10 or 11, 64-bit.</p>
+        <a href="{{ $releases }}" target="_blank" rel="noopener" class="wp-btn wp-btn--primary w-full" data-asset="_x64-setup.exe">Installer (.exe)</a>
+        <a href="{{ $releases }}" target="_blank" rel="noopener" class="wp-btn wp-btn--ghost w-full mt-2" data-asset="_x64_en-US.msi">MSI package</a>
+      </article>
+      <article class="download-card" id="demo">
+        <h2 class="download-card__os">Demo vault</h2>
+        <p class="muted"><em>The Monkey's Paw</em>, set up to show every feature.</p>
+        <a href="{{ $releases }}" target="_blank" rel="noopener" class="wp-btn wp-btn--ghost w-full" data-asset="Demo-Vault.zip">WRITEpad-Demo-Vault.zip</a>
+      </article>
+    </div>
+    <p class="muted text-sm mt-3">All files, older versions and release notes are on <a href="{{ $releases }}" target="_blank" rel="noopener">GitHub Releases</a>.</p>
+
+    <div class="prose-page mt-4">
+      <h2>First launch</h2>
+      <p>The installers aren't code-signed yet, so your computer will ask once before opening them.</p>
+      <ul>
+        <li><strong>Mac:</strong> open WRITEpad once, then go to <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>.</li>
+        <li><strong>Windows:</strong> when SmartScreen appears, click <strong>More info → Run anyway</strong>.</li>
+      </ul>
+
+      <h2>Narration</h2>
+      <p>Listening needs Python 3.10 or later. Press <strong>Listen</strong> and choose <strong>Set up narration</strong>; WRITEpad installs the Kokoro voice engine and downloads the voices itself. Everything else works without it.</p>
+
+      <h2>Trying the demo</h2>
+      <ol>
+        <li>Unzip <code>WRITEpad-Demo-Vault.zip</code>.</li>
+        <li>In WRITEpad, open <strong>Settings</strong> and choose the unzipped folder as your vault.</li>
+        <li>Open the note <em>Start here</em>.</li>
+      </ol>
+
+      <h2>Build it yourself</h2>
+      <p>The source and build instructions for Mac and Windows are in the <a href="{{ .Site.Params.repoURL }}" target="_blank" rel="noopener">GitHub repository</a>.</p>
+    </div>
+  </div>
+</section>
+{{ end }}

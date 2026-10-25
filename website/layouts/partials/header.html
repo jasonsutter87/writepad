@@ -1,0 +1,45 @@
+{{/* Accessible header with mobile menu */}}
+{{ $current := .RelPermalink }}
+{{ $links := slice
+  (dict "url" "/#features" "name" "Features")
+  (dict "url" "/pricing/" "name" "Pricing")
+  (dict "url" "/download/" "name" "Download")
+  (dict "url" .Site.Params.repoURL "name" "GitHub")
+}}
+<div class="container py-3">
+  <nav class="d-flex justify-content-between align-items-center" aria-label="Primary navigation">
+    <a href="/" class="site-header__brand">
+      <img src="{{ "images/brand/icon.png" | relURL }}" alt="" width="28" height="28">
+      {{ .Site.Title }}
+    </a>
+
+    {{/* Mobile menu button */}}
+    <button
+      type="button"
+      class="md:hidden bg-transparent border-0 p-2 rounded"
+      aria-label="Toggle navigation menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      onclick="document.getElementById('mobile-menu').classList.toggle('hidden'); this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');"
+    >
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+
+    {{/* Desktop menu */}}
+    <ul class="list-unstyled hidden md:flex align-items-center gap-4 mb-0">
+      {{ range $links }}
+        <li><a href="{{ .url }}"{{ if hasPrefix .url "http" }} target="_blank" rel="noopener"{{ end }} class="site-header__link"{{ if eq .url $current }} aria-current="page"{{ end }}>{{ .name }}</a></li>
+      {{ end }}
+      <li><a href="/download/" class="wp-btn wp-btn--primary" style="padding: 0.45rem 0.9rem">Get it free</a></li>
+    </ul>
+  </nav>
+
+  {{/* Mobile menu (hidden by default) */}}
+  <ul id="mobile-menu" class="hidden list-unstyled md:hidden mt-3 pb-2">
+    {{ range $links }}
+      <li class="py-2" style="border-bottom: 1px solid var(--line)"><a href="{{ .url }}"{{ if hasPrefix .url "http" }} target="_blank" rel="noopener"{{ end }} class="site-header__link block py-1">{{ .name }}</a></li>
+    {{ end }}
+  </ul>
+</div>

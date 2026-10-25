@@ -1,0 +1,8 @@
+{{- /* Markdown links: anything that leaves the site opens in a new tab. */ -}}
+{{- $u := urls.Parse .Destination -}}
+{{- $external := and $u.IsAbs (ne $u.Scheme "mailto") -}}
+<a href="{{ .Destination | safeURL }}"
+  {{- with .Title }} title="{{ . }}"{{ end -}}
+  {{- if $external }} target="_blank" rel="noopener"{{ end -}}
+>{{ .Text | safeHTML }}</a>
+{{- /* chomp trailing newline */ -}}

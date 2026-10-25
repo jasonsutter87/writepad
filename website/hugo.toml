@@ -1,0 +1,22 @@
+baseURL = 'https://writepad.app/'
+languageCode = 'en-us'
+title = 'WRITEpad'
+disableKinds = ['taxonomy', 'term']
+
+[params]
+CompanyName = 'WRITEpad'
+description = 'A free, open-source writing desk: versions you can onion-skin, local narration, dictation, and a library that measures the books you learn from.'
+version = '0.1.5'
+repoURL = 'https://github.com/jasonsutter87/writepad'
+releasesURL = 'https://github.com/jasonsutter87/writepad/releases/latest'
+issuesURL = 'https://github.com/jasonsutter87/writepad/issues'
+# Checkout link for the $5 Publish unlock (Lemon Squeezy, Gumroad, Stripe Payment Link...).
+# Leave empty and the buy buttons say "Coming soon".
+buyURL = ''
+price = '$5'
+
+[environments.development]
+baseURL = 'http://localhost:1313/'
+
+[environments.production]
+baseURL = 'https://writepad.app/'
