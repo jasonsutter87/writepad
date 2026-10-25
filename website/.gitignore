@@ -16,3 +16,6 @@ yarn-error.log*
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Netlify CLI link
+.netlify/
