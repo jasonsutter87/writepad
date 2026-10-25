@@ -604,7 +604,11 @@ fn app_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            // Signed self-updates from GitHub Releases (see RELEASING.md).
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
             let settings_path = app.path().app_config_dir()?.join("settings.json");
             let cache_dir = app.path().app_cache_dir()?;
             app.manage(AppState {

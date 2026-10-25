@@ -60,6 +60,10 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update packages; installed copies only accept updates
+          # signed with this key (public half in tauri.conf.json). Required.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: writepad
           args: --target ${{ matrix.target }}
@@ -70,5 +74,7 @@ jobs:
             **Windows:** download the `.msi` or `-setup.exe`. SmartScreen may warn because it's unsigned: **More info → Run anyway**.
 
             Narration: press Listen and choose **Set up narration**. It installs Kokoro and downloads the voices (about 350 MB). You need Python 3.10+ ([python.org](https://www.python.org/downloads/)).
+          # latest.json: the manifest installed copies check for updates.
+          includeUpdaterJson: true
           releaseDraft: false
           prerelease: false
