@@ -26,6 +26,28 @@ To cut a release: bump `version` in `src-tauri/tauri.conf.json`, then
 `git tag v0.1.1 && git push --tags`. The **Release** workflow builds all three
 and publishes them.
 
+### Updates
+
+Installed copies check
+`https://github.com/jasonsutter87/writepad/releases/latest/download/latest.json`
+a few seconds after launch and every six hours. When a newer release is out, a
+card offers to update: it saves open edits, takes a history snapshot if history
+is on, downloads, installs and restarts. Settings → Updates checks by hand.
+
+Every update is signed. The Release workflow signs with the
+`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+repository secrets, and the app installs only packages that match the public
+key in `src-tauri/tauri.conf.json`. The private key is
+`~/.tauri/writepad-updater.key`; its password is in the macOS Keychain as
+`writepad-updater-key-password`. **Back both up.** Lose the key and installed
+copies can never update themselves again.
+
+A local `tauri build` signs too, so it needs the key:
+
+    export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/writepad-updater.key)"
+    export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(security find-generic-password -a "$USER" -s writepad-updater-key-password -w)"
+    npm run tauri build
+
 ## Run
 
     npm install

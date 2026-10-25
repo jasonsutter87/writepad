@@ -9,6 +9,7 @@ import { sentences, speakable } from "./sentences";
 import { KINDS, renderGraph, renderTimeline, stopGraph, swatch } from "./world";
 import { renderLibrary, seriesVar } from "./library";
 import { autoCast, characters, isScreenplay, pronounHints, tableRead } from "./screenplay";
+import { initUpdater } from "./updater";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -2107,6 +2108,11 @@ async function main() {
   settings = await api.getSettings();
   applyTheme(settings);
   wire();
+  // Before an update installs: write pending edits, and keep a version if history is on.
+  initUpdater(async (version) => {
+    await flushSaves();
+    if (historyOn) await takeSnapshot(`Before updating to ${version}`, true);
+  });
   renderVoices();
   setMode("none");
   if (settings.vault) await loadVault().catch(fail);

@@ -185,6 +185,20 @@
 
     <div id="toast"></div>
 
+    <div id="update-card" role="status" hidden>
+      <span class="uc-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></span>
+      <div class="uc-text">
+        <strong id="uc-title"></strong>
+        <p id="uc-body"></p>
+        <div id="uc-progress" hidden><div></div></div>
+      </div>
+      <button id="uc-close" type="button" class="uc-close" aria-label="Not now">×</button>
+      <div id="uc-actions" class="uc-actions">
+        <button id="uc-notes" type="button">What's new</button>
+        <button id="uc-install" type="button" class="primary">Update now</button>
+      </div>
+    </div>
+
     <dialog id="dlg-import">
       <form method="dialog">
         <h2>Import</h2>
@@ -333,9 +347,22 @@
         <label class="field">Whisper model (shared with murmur) <input id="set-whisper" spellcheck="false" placeholder="small" /></label>
         <label class="field">Language <input id="set-lang" spellcheck="false" placeholder="en, es, or auto" /></label>
         <label class="check"><input id="set-polish" type="checkbox" /> Polish with Claude: drop ums and fix punctuation, keep every word</label>
+        <h3 class="dialog-section">Updates</h3>
+        <p class="hint">WRITEpad checks for new versions a few times a day. Every update is signed, and your work is saved before it installs.</p>
+        <p class="row update-row"><span id="app-version"></span><button id="btn-check-updates" type="button">Check for updates</button><span id="update-status" class="hint"></span></p>
         <div class="actions">
           <button value="cancel">Cancel</button>
           <button id="btn-save-settings" value="ok" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-whats-new">
+      <form method="dialog">
+        <h2 id="whats-new-title">What's new</h2>
+        <div id="whats-new-body" class="whats-new"></div>
+        <div class="actions">
+          <button value="ok" class="primary">Close</button>
         </div>
       </form>
     </dialog>

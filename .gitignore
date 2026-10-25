@@ -9,3 +9,10 @@ __pycache__
 # Lock files WRITEpad makes while the demo vault is open
 demo/**/.lock
 demo/**/.*.lock
+
+# Local Netlify folder
+.netlify
+
+# Hugo build lock and cache
+.hugo_build.lock
+website/resources/_gen
