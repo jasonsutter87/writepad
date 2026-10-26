@@ -1,0 +1,61 @@
+{{ define "main" }}
+<section class="page-hero">
+  <div class="container">
+    <p class="eyebrow mb-2">Contact</p>
+    <h1>Send a message</h1>
+    <p class="muted mt-2 mb-0">Questions, bugs, or help with a Publish purchase. You'll get a reply by email.</p>
+  </div>
+</section>
+
+<section class="pb-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 col-lg-7 mb-5 lg:mb-0">
+        {{/* Netlify registers this form at deploy (data-netlify). It posts to the
+             contact function, which rate-limits and forwards it; see
+             netlify/functions/contact.mts. Field names must match there. */}}
+        <form id="form" name="contact" method="POST" action="/api/contact" data-netlify="true" netlify-honeypot="company" class="contact-form">
+          <p id="form-status" class="form-status" role="alert" hidden></p>
+
+          <div class="row">
+            <label class="field col-12 col-md-6">Name
+              <input name="name" autocomplete="name" maxlength="100">
+            </label>
+            <label class="field col-12 col-md-6">Email <span class="muted">(required)</span>
+              <input name="email" type="email" autocomplete="email" maxlength="200" required>
+            </label>
+          </div>
+
+          <label class="field">About
+            <select name="topic">
+              <option value="question">A question</option>
+              <option value="bug">A bug</option>
+              <option value="publish">My Publish purchase</option>
+              <option value="other">Something else</option>
+            </select>
+          </label>
+
+          <label class="field">Message <span class="muted">(required)</span>
+            <textarea name="message" rows="7" maxlength="5000" required></textarea>
+          </label>
+
+          {{/* Spam traps: people never see "company"; "started" is set by contact.js. */}}
+          <label class="honeypot" aria-hidden="true">Company <input name="company" tabindex="-1" autocomplete="off"></label>
+          <input type="hidden" name="started">
+          <input type="hidden" name="relay">
+
+          <button type="submit" class="wp-btn wp-btn--primary">Send message</button>
+        </form>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <div class="ask-card lg:ml-8">
+          <h2 class="ask-card__title">Found a bug?</h2>
+          <p class="muted">A GitHub issue is the fastest way to get it fixed, and other people can follow along.</p>
+          <a href="{{ .Site.Params.issuesURL }}" target="_blank" rel="noopener" class="wp-btn wp-btn--ghost">Open an issue</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{{ end }}

@@ -1,0 +1,17 @@
+{{ define "main" }}
+<div class="container py-5">
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+
+  {{ if .Pages }}
+  <ul class="list-unstyled mt-4">
+    {{ range .Pages }}
+    <li class="mb-3">
+      <a href="{{ .Permalink }}">{{ .Title }}</a>
+      {{ if .Description }}<p class="text-muted mb-0">{{ .Description }}</p>{{ end }}
+    </li>
+    {{ end }}
+  </ul>
+  {{ end }}
+</div>
+{{ end }}

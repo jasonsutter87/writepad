@@ -1,0 +1,163 @@
+{{ define "main" }}
+
+{{/* HERO */}}
+<section class="home-hero" aria-labelledby="hero-title">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-12 col-lg-6 hero-content">
+        <p class="eyebrow mb-3">Free &amp; open source · Mac &amp; Windows</p>
+        <h1 id="hero-title" class="home-hero__title">A writing desk for working a draft over.</h1>
+        <p class="home-hero__lede">
+          Keep every version of every scene, lay one over another like onion skin,
+          and hear what you wrote read back in a voice that never leaves your computer.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mt-4 justify-content-center lg:justify-start">
+          <a href="/download/" class="wp-btn wp-btn--primary">Download free</a>
+          <a href="/pricing/" class="wp-btn wp-btn--ghost">EPUB &amp; audiobook export · {{ .Site.Params.price }}</a>
+        </div>
+        <p class="muted text-sm mt-3 mb-0">No account. No subscription. Your files are plain Markdown in a folder you choose.</p>
+      </div>
+
+      <div class="col-12 col-lg-6 mt-5 lg:mt-0 hero-media">
+        {{ partial "home/editor-mock.html" . }}
+      </div>
+    </div>
+  </div>
+</section>
+
+{{/* FEATURES */}}
+<section id="features" class="home-section">
+  <div class="container">
+    <p class="eyebrow mb-2">What it does</p>
+    <h2 class="home-section__title">Built for the second draft, and the tenth.</h2>
+    <p class="home-section__lede muted">Most editors keep the latest version and throw the rest away. WRITEpad keeps all of them side by side, so trying something is never a risk.</p>
+
+    <div class="feature-grid mt-5">
+      {{ range .Params.features }}
+        <article class="feature-card">
+          <div class="feature-card__icon" aria-hidden="true">{{ partial "icon.html" .icon }}</div>
+          <h3 class="feature-card__title">{{ .title }}</h3>
+          <p class="feature-card__description mb-0">{{ .text }}</p>
+        </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+{{/* PRIVATE BY DESIGN */}}
+<section class="home-section home-band">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-12 col-lg-5 mb-4 lg:mb-0">
+        <p class="eyebrow mb-2">Everything stays local</p>
+        <h2 class="home-section__title">Your manuscript is a folder, not a cloud account.</h2>
+      </div>
+      <div class="col-12 col-lg-7">
+        <ul class="check-list">
+          <li><strong>Plain files.</strong> Notes are Markdown; an Obsidian vault works as-is. Takes are one <code>.md</code> file each.</li>
+          <li><strong>Local voices.</strong> Narration runs Kokoro and dictation runs Whisper on your own machine.</li>
+          <li><strong>Real history.</strong> Snapshots are git commits in your vault, readable by any git tool and pushable for backup.</li>
+          <li><strong>Library keeps numbers only.</strong> Books you measure are reduced to statistics; their text is never stored.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{/* PRICING */}}
+<section id="pricing" class="home-section">
+  <div class="container">
+    <div class="text-center">
+      <p class="eyebrow mb-2">Pricing</p>
+      <h2 class="home-section__title mx-auto">Write for free. Publish for {{ .Site.Params.price }}.</h2>
+      <p class="home-section__lede muted mx-auto">The whole desk is free. When the book is done, a one-time {{ .Site.Params.price }} unlock turns it into an ebook and an audiobook.</p>
+    </div>
+    {{ partial "pricing-cards.html" . }}
+  </div>
+</section>
+
+{{/* DEMO VAULT */}}
+<section class="home-section home-band">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-12 col-lg-7 mb-4 lg:mb-0">
+        <p class="eyebrow mb-2">Try it on a real story</p>
+        <h2 class="home-section__title">Open the demo vault: <em>The Monkey's Paw</em>.</h2>
+        <p class="muted mb-0">
+          W. W. Jacobs' 1902 story, set up as a working manuscript: drafts to onion-skin,
+          a cast and timeline in World, books in the Library to write toward, and a
+          five-voice table read. Unzip it, open the folder in Settings, and start with <em>Start here</em>.
+        </p>
+      </div>
+      <div class="col-12 col-lg-5 lg:text-right">
+        <a href="/download/#demo" class="wp-btn wp-btn--ghost">Get the demo vault</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{/* FAQ */}}
+<section id="faq" class="home-section">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 col-lg-5 mb-5 lg:mb-0">
+        <div class="faq-aside">
+          <p class="eyebrow mb-2">Questions</p>
+          <h2 class="home-section__title">Good to know</h2>
+          <p class="muted mb-5">The short answers about price, privacy and what runs where.</p>
+
+          <div class="ask-card">
+            <div class="ask-card__sheets" aria-hidden="true">
+              <span></span><span></span>
+              <img src="{{ "images/brand/icon.png" | relURL }}" alt="" width="72" height="72">
+            </div>
+            <h3 class="ask-card__title">Still have a question?</h3>
+            <p class="muted mb-4">Ask on GitHub, where the answer helps the next person too, or send a message.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="{{ .Site.Params.issuesURL }}" target="_blank" rel="noopener" class="wp-btn wp-btn--primary">Ask on GitHub</a>
+              <a href="/contact/" class="wp-btn wp-btn--ghost">Send a message</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-7">
+        <div class="faq">
+          {{ range $i, $f := .Params.faq }}
+            <details class="faq__item"{{ if eq $i 0 }} open{{ end }}>
+              <summary>{{ $f.q }}</summary>
+              <div class="faq__answer">{{ $f.a | markdownify }}</div>
+            </details>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{/* FROM THE BLOG: the latest posts, so the home page links to them */}}
+{{ with first 3 (where site.RegularPages "Section" "blog").ByDate.Reverse }}
+<section class="home-section" aria-labelledby="blog-title">
+  <div class="container">
+    <p class="eyebrow mb-2">From the blog</p>
+    <h2 id="blog-title" class="home-section__title">Notes on working a draft over</h2>
+    <div class="post-grid mt-4">
+      {{ range . }}{{ partial "post-card.html" . }}{{ end }}
+    </div>
+    <p class="mt-4 mb-0"><a href="/blog/" class="wp-btn wp-btn--ghost">All posts</a></p>
+  </div>
+</section>
+{{ end }}
+
+{{/* CLOSING CTA */}}
+<section class="home-section home-cta">
+  <div class="container text-center">
+    <h2 class="home-section__title mx-auto">Open a folder. Start a take.</h2>
+    <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
+      <a href="/download/" class="wp-btn wp-btn--primary">Download WRITEpad</a>
+      <a href="{{ .Site.Params.repoURL }}" target="_blank" rel="noopener" class="wp-btn wp-btn--ghost">Read the source</a>
+    </div>
+  </div>
+</section>
+
+{{ end }}

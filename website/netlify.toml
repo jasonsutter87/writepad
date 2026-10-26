@@ -1,0 +1,13 @@
+[build]
+  publish = "public"
+  # $URL is the site's main address on Netlify (the custom domain once one is
+  # set), so canonical links and share images point at the live site.
+  command = 'npm run build -- --baseURL "$URL/"'
+
+# Functions live in netlify/functions (contact form relay and its guard).
+# They need FORM_RELAY_SECRET and NETLIFY_API_TOKEN set in the Netlify UI.
+
+[context.production.environment]
+  HUGO_VERSION = "0.147.4"
+  NODE_VERSION = "20"
+

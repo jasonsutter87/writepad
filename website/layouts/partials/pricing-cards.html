@@ -1,0 +1,30 @@
+<div class="pricing mt-5">
+  <article class="price-card">
+    <h3 class="price-card__name">WRITEpad</h3>
+    <p class="price-card__price">Free <span class="muted">forever</span></p>
+    <p class="muted">The whole writing desk, open source.</p>
+    <ul class="check-list check-list--compact">
+      <li>Unlimited manuscripts, takes and cuts</li>
+      <li>Onion-skin compare and A/B listen</li>
+      <li>Local narration and dictation</li>
+      <li>Library, cadence and World</li>
+      <li>Screenplays in Fountain</li>
+      <li>Git history and the MCP server for agents</li>
+      <li>Export to PDF, Markdown and plain text</li>
+    </ul>
+    <a href="/download/" class="wp-btn wp-btn--ghost w-full mt-auto">Download free</a>
+  </article>
+
+  <article class="price-card price-card--featured">
+    <p class="price-card__tag">One-time</p>
+    <h3 class="price-card__name">Publish</h3>
+    <p class="price-card__price">{{ site.Params.price }} <span class="muted">once</span></p>
+    <p class="muted">Everything free, plus two exports for the finished book.</p>
+    <ul class="check-list check-list--compact">
+      <li><strong>EPUB 3 ebook:</strong> title page, contents, a file per chapter, italics kept. The format Apple Books, Kobo and Kindle Direct Publishing accept.</li>
+      <li><strong>MP3 audiobook:</strong> one track per chapter, read in your chosen voices with your pronunciations, tagged and ready to play.</li>
+      <li>No subscription and no account</li>
+    </ul>
+    {{ partial "buy-button.html" "wp-btn wp-btn--primary w-full mt-auto" }}
+  </article>
+</div>

@@ -1,0 +1,6 @@
+{{/* The $5 Publish checkout. Pass a class string; with no buyURL set it renders disabled. */}}
+{{ with site.Params.buyURL }}
+  <a href="{{ . }}" class="{{ $ }}" target="_blank" rel="noopener">Unlock Publish · {{ site.Params.price }}</a>
+{{ else }}
+  <span class="{{ $ }}" aria-disabled="true">Publish · coming soon</span>
+{{ end }}

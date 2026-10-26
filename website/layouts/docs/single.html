@@ -1,0 +1,35 @@
+{{ define "main" }}
+{{ $here := .RelPermalink }}
+{{ $docs := where site.RegularPages "Section" "docs" }}
+{{ $all := slice }}
+{{ range site.Params.docGroups }}{{ $all = $all | append (where $docs "Params.group" .).ByWeight }}{{ end }}
+<div class="container docs-layout">
+  <nav class="docs-nav" aria-label="Help topics">
+    <a class="docs-nav-home" href="/docs/">All help topics</a>
+    {{ range site.Params.docGroups }}
+    <h2>{{ . }}</h2>
+    <ul>
+      {{ range (where $docs "Params.group" .).ByWeight }}
+      <li><a href="{{ .RelPermalink }}" {{ if eq .RelPermalink $here }}aria-current="page"{{ end }}>{{ .Title }}</a></li>
+      {{ end }}
+    </ul>
+    {{ end }}
+  </nav>
+
+  <article class="docs-article">
+    <header class="docs-head">
+      <p class="eyebrow mb-2"><a href="/docs/">Help</a>{{ with .Params.group }} · {{ . }}{{ end }}</p>
+      <h1>{{ .Title }}</h1>
+      <p class="lede">{{ .Description }}</p>
+    </header>
+    <div class="prose-page">
+      {{ .Content }}
+    </div>
+    <nav class="docs-pager" aria-label="Next and previous topics">
+      {{ $i := 0 }}{{ range $n, $p := $all }}{{ if eq $p.RelPermalink $here }}{{ $i = $n }}{{ end }}{{ end }}
+      {{ if gt $i 0 }}{{ with index $all (sub $i 1) }}<a class="docs-pager-prev" href="{{ .RelPermalink }}"><span>Previous</span>{{ .Title }}</a>{{ end }}{{ end }}
+      {{ if lt (add $i 1) (len $all) }}{{ with index $all (add $i 1) }}<a class="docs-pager-next" href="{{ .RelPermalink }}"><span>Next</span>{{ .Title }}</a>{{ end }}{{ end }}
+    </nav>
+  </article>
+</div>
+{{ end }}

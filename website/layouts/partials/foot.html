@@ -1,0 +1,3 @@
+{{ range .Params.js }}
+  <script defer src="{{ "js/pages/" | relURL }}{{ . }}"></script>
+{{ end }}

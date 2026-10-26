@@ -1,0 +1,27 @@
+<div class="container py-5">
+  <div class="row">
+    <div class="col-12 col-md-5 mb-4 md:mb-0">
+      <p class="serif text-xl mb-2" style="color: var(--ink)">{{ .Site.Title }}</p>
+      <p class="mb-0">A writing desk for working a draft over. Free and open source; your writing stays on your machine.</p>
+    </div>
+    <div class="col-6 col-md-3 mb-4 md:mb-0">
+      <ul class="list-unstyled mb-0">
+        <li class="mb-2"><a href="/download/">Download</a></li>
+        <li class="mb-2"><a href="/pricing/">Pricing</a></li>
+        <li class="mb-2"><a href="/docs/">Help &amp; docs</a></li>
+        <li class="mb-2"><a href="/blog/">Blog</a></li>
+        <li class="mb-2"><a href="{{ .Site.Params.repoURL }}" target="_blank" rel="noopener">Source code</a></li>
+        <li><a href="{{ .Site.Params.issuesURL }}" target="_blank" rel="noopener">Report a bug</a></li>
+      </ul>
+    </div>
+    <div class="col-6 col-md-4">
+      <ul class="list-unstyled mb-0">
+        <li class="mb-2"><a href="/privacy-policy/">Privacy</a></li>
+        <li class="mb-2"><a href="/terms-of-use/">Terms</a></li>
+        <li class="mb-2"><a href="/accessibility-statement/">Accessibility</a></li>
+        <li><a href="/contact/">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="mt-5 mb-0 text-sm">&copy; {{ now.Year }} {{ .Site.Params.companyName }}. Version {{ .Site.Params.version }}.</p>
+</div>

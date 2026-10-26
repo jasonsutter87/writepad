@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode | default "en-us" }}">
+  <head>
+    {{ partial "head.html" . }}
+  </head>
+  <body class="min-h-screen flex flex-col">
+    {{/* Skip link for keyboard users - hidden until focused */}}
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-white focus:text-dark focus:px-4 focus:py-2 focus:rounded focus:shadow-lg">
+      Skip to main content
+    </a>
+
+    <header class="site-header">
+      {{ partial "header.html" . }}
+    </header>
+
+    <main id="main-content" class="flex-grow" tabindex="-1">
+      {{ block "main" . }}{{ end }}
+    </main>
+
+    <footer class="site-footer mt-auto">
+      {{ partial "footer.html" . }}
+    </footer>
+
+    {{ partial "foot.html" . }}
+  </body>
+</html>

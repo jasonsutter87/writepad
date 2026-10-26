@@ -1,0 +1,82 @@
+{{/* Accessible header with mobile menu */}}
+{{ $current := .RelPermalink }}
+{{ $links := slice
+  (dict "url" "/#features" "name" "Features")
+  (dict "url" "/docs/" "name" "Docs")
+  (dict "url" "/blog/" "name" "Blog")
+  (dict "url" "/pricing/" "name" "Pricing")
+  (dict "url" "/download/" "name" "Download")
+  (dict "url" .Site.Params.repoURL "name" "GitHub")
+}}
+<div class="container py-3">
+  <nav class="d-flex justify-content-between align-items-center" aria-label="Primary navigation">
+    <a href="/" class="site-header__brand">
+      <img src="{{ "images/brand/icon.png" | relURL }}" alt="" width="28" height="28">
+      {{ .Site.Title }}
+    </a>
+
+    {{/* Mobile menu button: three bars that turn into an X while the menu is open */}}
+    <button
+      type="button"
+      class="menu-toggle md:hidden"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+    >
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+    </button>
+
+    {{/* Desktop menu */}}
+    <ul class="list-unstyled hidden md:flex align-items-center gap-4 mb-0">
+      {{ range $links }}
+        <li><a href="{{ .url }}"{{ if hasPrefix .url "http" }} target="_blank" rel="noopener"{{ end }} class="site-header__link"{{ if eq .url $current }} aria-current="page"{{ end }}>{{ .name }}</a></li>
+      {{ end }}
+      <li><a href="/download/" class="wp-btn wp-btn--primary" style="padding: 0.45rem 0.9rem">Get it free</a></li>
+    </ul>
+  </nav>
+
+  {{/* Mobile menu: a full-screen panel under the header bar */}}
+  <nav id="mobile-menu" class="mobile-menu md:hidden" aria-label="Mobile navigation" hidden>
+    <ul class="list-unstyled mobile-menu__links">
+      {{ range $links }}
+        <li><a href="{{ .url }}"{{ if hasPrefix .url "http" }} target="_blank" rel="noopener"{{ end }}{{ if eq .url $current }} aria-current="page"{{ end }}>{{ .name }}</a></li>
+      {{ end }}
+    </ul>
+    <a href="/download/" class="wp-btn wp-btn--primary mobile-menu__cta">Get it free</a>
+  </nav>
+</div>
+
+<script>
+  (function () {
+    var button = document.querySelector('.menu-toggle');
+    var menu = document.getElementById('mobile-menu');
+    if (!button || !menu) return;
+    function set(open) {
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      var header = button.closest('.site-header');
+      if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+      if (open) document.documentElement.classList.add('menu-open');
+      if (open) {
+        menu.hidden = false;
+        requestAnimationFrame(function () { menu.classList.add('is-open'); });
+      } else {
+        menu.classList.remove('is-open');
+        setTimeout(function () {
+          if (menu.classList.contains('is-open')) return;
+          menu.hidden = true;
+          // The header's blur would make the panel fixed to it, so it comes back only once the panel is gone.
+          document.documentElement.classList.remove('menu-open');
+        }, 250);
+      }
+    }
+    button.addEventListener('click', function () { set(button.getAttribute('aria-expanded') !== 'true'); });
+    menu.addEventListener('click', function (e) { if (e.target.closest('a')) set(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && button.getAttribute('aria-expanded') === 'true') { set(false); button.focus(); }
+    });
+    matchMedia('(min-width: 768px)').addEventListener('change', function (m) { if (m.matches) set(false); });
+  })();
+</script>
