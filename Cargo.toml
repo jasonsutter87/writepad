@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/cli", "src-tauri"]
+members = ["crates/core", "crates/cli", "crates/devserver", "src-tauri"]
 
 # Same patched whisper.cpp build as murmur (target-aware BLAS, Android NDK fixes).
 [patch.crates-io]

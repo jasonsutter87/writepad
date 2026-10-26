@@ -92,6 +92,20 @@ Those are the default locations; put them anywhere and set the paths in
 Settings. Dictation downloads its Whisper model on first use. Hold-to-talk is
 Right Alt. PDF export uses Edge, which every Windows install has.
 
+## Browser preview (docs and screenshots)
+
+The UI can run in a normal browser against a sandbox copy of `demo/`, so
+tools like auto-documentor (or Playwright) can click through it:
+
+    cargo run -p writepad-devserver   # the app's commands on 127.0.0.1:1421
+    npm run dev                       # http://localhost:1420
+
+`crates/devserver` serves the same core calls as the desktop app over HTTP,
+on a fresh copy of the demo in `target/docs-vault` (`POST /api/__reset`
+copies it again). `src/devbridge.ts` routes the page's calls there when
+there's no Tauri; the production build drops it. Narration, dictation and
+file dialogs need the desktop app.
+
 ## Headless: agents
 
 `writepad mcp` is an MCP server over stdio. Each agent session runs its own
@@ -112,12 +126,29 @@ The app watches the vault and shows agents' takes and edits as they land.
 
 Same tools from a shell: `writepad tools`, `writepad call outline '{"manuscript":"the-last-thinker"}'`.
 
+## Page properties
+
+Under a page's title, **+ Property** adds a name and a value, such as
+`verses: Matthew 1:18–25`, `POV: June` or `see: [[Research/1920s]]`.
+`[[Links]]` open notes, other pages (`[[Page]]`) or pages of another manuscript
+(`[[Manuscript#Page]]`). Properties belong to the page, not to one take, are
+found by search, and are never exported. Names you've used before are offered
+as you type. Agents use `set_props`, and `outline` lists them.
+
 ## Search
 
 The box above the sidebar tabs (⌘⇧F) searches every note and every take of
 every manuscript, not just the live ones, so a word only one draft uses still
-turns up; each hit names its take. Every word must match, ignoring case; title
-matches come first. Clicking a hit opens that take with the match selected,
+turns up; each hit names its take. Every word must match, ignoring case.
+Matches in a title or a page's properties come first, then the words as
+typed, then the most matches. Hyphens and dashes count as the same.
+
+A search that reads as a reference (`Matthew 1:1-2`, `john 3:16`, `Luke 15`)
+also finds every page whose properties cite an overlapping range, and puts
+them first: `verses: Matthew 1:1–17; Luke 3:23–38` answers `Matthew 1:5`
+and `Luke 3`. Properties can list several books, ranges across chapters
+(`1:18–2:3`) and follow-ons that keep the book (`Mark 1:1-8, 2:3`); book
+names match from three letters (`matt`). Clicking a hit opens that take with the match selected,
 and the results stay put so you can step through them. Esc or a tab clears it.
 
 ## Storage (v2)
@@ -141,8 +172,15 @@ Older single-file manuscripts migrate on first open (kept as `<id>.json.v1`).
   one to try something; *Make live* puts it in the current cut.
 - **Onion skin**: pick a version to compare with. Words you added are tinted;
   words the other version had are drawn as ghosts. The Ghost slider fades them.
-- **Cuts**: drag blocks in the outline to reorder. Save the order plus the
-  live versions as a named cut; *Export live cut* writes `<id>.cut.md`.
+- **Cuts**: a cut is a named recipe: which pages are in, their order, and
+  each one's ★ live version. Drag pages in the outline to reorder; press
+  **−** on a page (or drag it below the line) to leave it out, **+** to put
+  it back. Pages left out stay in the outline, struck through, but aren't
+  exported (as text or audio) or counted. **Save** names the current cut;
+  clicking a cut applies it: its pages in its order, everything else left
+  out. Deleting a cut never touches pages, and **Undo** brings it back.
+- **Delete page** (next to the page title) deletes a page with every
+  version. It goes to the trash whole, and **Undo** puts it back where it was.
 
 ## Dictation (murmur-core)
 
@@ -187,6 +225,14 @@ Cline). **Compare** opens with **Against your target**: one card per measure
 biggest gaps first, recalculated as you write. Below that, every book, the
 target and your manuscript in one table, plus sentence-length and
 chapter-length charts.
+
+**Your own numbers.** **Set a target…** (or **Target…**) under a scene's
+title takes a chapter length (a range or one number), a median sentence, a
+dialogue share and a word goal for the whole manuscript. They're saved with
+the manuscript, win over the Library blend wherever both give a number, and
+need no books at all. The word goal adds a progress bar under the
+manuscript's name in the outline, counting each page's live take. Agents use
+`set_target`.
 
 Scanned EPUBs (one page per file, no paragraph breaks) are rejoined and cut at
 "Chapter 1, 2, …"; their paragraph numbers are left out rather than guessed.
@@ -333,9 +379,15 @@ the repo can be pushed for backup or sync.
 
 ## Export
 
-**Export** (top bar) writes the open manuscript's live cut (outline order,
-★ live versions) or the open note:
+**Export** (top bar) writes the open manuscript's current cut (outline
+order, ★ live versions, pages left out skipped) or the open note:
 
+- **Word (.docx)**, **OpenDocument (.odt)** and **Rich Text (.rtf)**: a title
+  page, each chapter on a new page under a real Heading 1 (so Word's navigation
+  pane lists them), first paragraphs unindented, bold, italics, centered lines
+  and scene breaks kept. Georgia 12 pt, 1.5 spacing, US Letter with 1″ margins.
+  Nothing extra to install.
+- **Web page (.html)**: the whole book as one readable page.
 - **EPUB 3**: title page, nav, one XHTML file per chapter, italics kept.
 - **PDF**: 5.5×8.5″ book typeset by headless Chrome (needs Chrome, Chromium,
   Edge or Brave installed).

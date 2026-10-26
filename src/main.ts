@@ -1,7 +1,8 @@
+import "./devbridge";
 import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
+import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
 import { applyTheme, contrast, PRESETS } from "./theme";
 import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
@@ -74,6 +75,18 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLEl
   return node;
 }
 
+/** A clickable row (list item, property) that the keyboard can reach and open with Enter or Space. */
+function clickable(node: HTMLElement, run: () => unknown) {
+  node.onclick = run;
+  node.tabIndex = 0;
+  node.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target === node) {
+      e.preventDefault();
+      node.click();
+    }
+  });
+}
+
 /** A button that needs a second click within 3s, instead of a confirm dialog. */
 function confirmButton(label: string, onConfirm: () => void, cls = "ghost danger") {
   const b = el("button", { className: cls, textContent: label, type: "button" });
@@ -133,10 +146,12 @@ function applyMs(m: Manuscript) {
   if (compareId && !compareVariant()) compareId = null;
   renderOutline();
   renderCuts();
+  renderProgress();
   if (doc?.kind === "block") {
     if (!currentVariant()) return openBlock(doc.blockId); // our take was deleted
     renderVariants();
     renderCompare();
+    renderProps();
   }
 }
 
@@ -193,7 +208,7 @@ const editor = new Editor($("editor"), {
     narrator.stop();
     return true;
   },
-  onLink: (target) => openLink(target).catch(fail),
+  onLink: (target) => openPageLink(target).catch(fail),
 });
 
 const narrator = new Narrator(() => ({
@@ -389,7 +404,10 @@ type Mode = "none" | "note" | "block" | "graph" | "timeline" | "library";
 function setMode(mode: Mode) {
   if (document.body.dataset.mode === "graph" && mode !== "graph") stopGraph();
   // The take buttons act on a block; they must never outlive it.
-  if (mode !== "block") $("variants").replaceChildren();
+  if (mode !== "block") {
+    $("variants").replaceChildren();
+    $("props").replaceChildren();
+  }
   document.body.dataset.mode = mode;
   $("empty").hidden = mode !== "none";
   $("graph-view").hidden = mode !== "graph";
@@ -412,6 +430,12 @@ function openBlock(blockId: string, variantId?: string) {
   }
   compareSnap = null;
   setMode("block");
+  $("note-actions").replaceChildren(
+    Object.assign(
+      confirmButton("Delete page", () => deletePage(block.id)),
+      { title: "Delete this page and all its versions (click twice; Undo brings it back). To set it aside instead, leave it out of the cut." },
+    ),
+  );
   const title = $<HTMLInputElement>("doc-title");
   title.value = block.title;
   title.readOnly = false;
@@ -422,6 +446,9 @@ function openBlock(blockId: string, variantId?: string) {
   renderVariants();
   renderCompare();
   renderOutline();
+  propEdit = null;
+  propDraft = null;
+  renderProps();
   setGhost(ghost);
   loadHistory();
   loadSceneCast();
@@ -464,6 +491,23 @@ async function openLink(target: string) {
   }
 }
 
+/** Open a `[[link]]`: `[[Manuscript#Page]]`, a page of this manuscript, or a note. */
+async function openPageLink(target: string) {
+  const norm = (s: string) => s.trim().toLowerCase();
+  const hash = target.indexOf("#");
+  if (hash >= 0) {
+    const [msName, page] = [target.slice(0, hash), target.slice(hash + 1)];
+    const info = (await api.listManuscripts()).find((m) => norm(m.title) === norm(msName) || m.id === msName.trim());
+    const m = info && (info.id === ms?.id ? ms : await api.loadManuscript(info.id));
+    const block = m?.blocks.find((b) => norm(b.title) === norm(page));
+    if (info && block) return openScene(info.id, block.id);
+    return toast(`No page “${target}”.`, true);
+  }
+  const page = ms?.blocks.find((b) => norm(b.title) === norm(target));
+  if (page && doc?.kind === "block") return openBlock(page.id);
+  return openLink(target);
+}
+
 async function openManuscript(id: string) {
   flushSaves();
   ms = await api.loadManuscript(id);
@@ -499,11 +543,31 @@ function renderOutline() {
   const list = $("outline");
   list.replaceChildren();
   if (!ms) return;
+  const left = ms.blocks.filter((b) => b.out).length;
   for (const block of ms.blocks) {
+    if (block.out && block === ms.blocks.find((b) => b.out)) {
+      list.append(
+        el("li", {
+          className: "outline-divider",
+          textContent: `Left out of this cut · ${left}`,
+          title: "Not exported (as text or audio) or counted. Drag a page above this line, or press + on it, to put it back.",
+        }),
+      );
+    }
     const live = block.variants.find((v) => v.id === block.live);
+    const toggle = el("button", {
+      type: "button",
+      className: "ghost out-toggle",
+      textContent: block.out ? "+" : "−",
+      title: block.out ? "Put back in this cut" : "Leave out of this cut",
+    });
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      if (ms) op(api.setBlockOut(ms.id, block.id, !block.out));
+    };
     const li = el(
       "li",
-      { draggable: true, className: doc?.kind === "block" && doc.blockId === block.id ? "active" : "" },
+      { draggable: true, className: [doc?.kind === "block" && doc.blockId === block.id ? "active" : "", block.out ? "out" : ""].join(" ").trim() },
       el("span", { className: "grip", textContent: "⋮⋮" }),
       el("span", { className: "name", textContent: block.title }),
       el("span", {
@@ -511,9 +575,10 @@ function renderOutline() {
         textContent: block.variants.length > 1 ? `${block.variants.length} · ${live?.label ?? ""}` : "",
         title: "versions · live version",
       }),
+      toggle,
     );
     li.dataset.id = block.id;
-    li.onclick = () => openBlock(block.id);
+    clickable(li, () => openBlock(block.id));
     li.ondragstart = (e) => {
       e.dataTransfer!.setData("text/plain", block.id);
       li.classList.add("dragging");
@@ -554,8 +619,12 @@ async function addChapter() {
   loadManuscripts().catch(() => {});
 }
 
-function moveBlock(id: string, targetId: string, after: boolean) {
+/** Drop a page next to another; dropped among the pages left out, it's left out too, and back among the rest, it's put back. */
+async function moveBlock(id: string, targetId: string, after: boolean) {
   if (!ms || id === targetId) return;
+  const [moved, target] = [id, targetId].map((x) => ms!.blocks.find((b) => b.id === x));
+  if (!moved || !target) return;
+  if (moved.out !== target.out && !(await op(api.setBlockOut(ms.id, id, target.out)))) return;
   const order = ms.blocks.map((b) => b.id).filter((b) => b !== id);
   order.splice(order.indexOf(targetId) + (after ? 1 : 0), 0, id);
   op(api.setOrder(ms.id, order));
@@ -736,7 +805,7 @@ function renderHistory() {
       confirmButton("Roll back whole vault", () => rollBack(h.snapshot.id, h.snapshot.message), "ghost danger"),
     );
     li.append(actions);
-    li.onclick = () => {
+    clickable(li, () => {
       compareSnap = compareSnap?.text === h.text ? null : { label: `${label}, ${when(h.snapshot.time)}`, text: h.text };
       if (ghost === 0) {
         $<HTMLInputElement>("rng-ghost").value = "60";
@@ -745,7 +814,7 @@ function renderHistory() {
       renderCompare();
       renderHistory();
       setGhost(ghost);
-    };
+    });
     list.append(li);
   }
 }
@@ -804,6 +873,29 @@ window.setInterval(() => {
 }, 60_000);
 
 /** Move a note to the trash, with Undo. */
+/** Delete a page with every version, open its neighbour, and offer Undo. */
+async function deletePage(blockId: string) {
+  if (!ms) return;
+  const msId = ms.id;
+  const i = ms.blocks.findIndex((b) => b.id === blockId);
+  const title = ms.blocks[i]?.title ?? "page";
+  await flushSaves();
+  const m = await op(api.deleteBlock(msId, blockId));
+  if (!m) return;
+  const next = m.blocks[Math.min(i, m.blocks.length - 1)];
+  if (next) openBlock(next.id);
+  loadManuscripts().catch(() => {});
+  toast(`Deleted “${title}”.`, false, {
+    label: "Undo",
+    run: async () => {
+      if (!(await op(api.restoreBlock(msId, blockId)))) return;
+      if (ms?.id === msId) openBlock(blockId);
+      loadManuscripts().catch(() => {});
+      toast(`Restored “${title}”.`);
+    },
+  });
+}
+
 async function deleteNote(path: string) {
   await flushSaves();
   pendingNote = null;
@@ -873,7 +965,7 @@ function renderWorld() {
         el("span", { className: "name", textContent: e.name }),
       );
       if (e.status === "draft") li.append(el("span", { className: "badge draft", textContent: "draft" }));
-      li.onclick = () => openNote(e.path).catch(fail);
+      clickable(li, () => openNote(e.path).catch(fail));
       list.append(li);
     }
     group.append(list);
@@ -889,9 +981,9 @@ function renderWorld() {
     const missing = i.message.match(/^\[\[(.+?)\]\] is linked/);
     if (missing) {
       li.title = "Create this note";
-      li.onclick = () => newEntry("character", missing[1]);
+      clickable(li, () => newEntry("character", missing[1]));
     } else if (i.path) {
-      li.onclick = () => openNote(i.path).catch(fail);
+      clickable(li, () => openNote(i.path).catch(fail));
     }
     ul.append(li);
   }
@@ -1152,7 +1244,7 @@ async function loadSceneCast() {
       const ul = el("ul", { className: "list" });
       for (const e of info.events) {
         const li = el("li", {}, swatch("event"), el("span", { className: "name", textContent: e.name }));
-        li.onclick = () => openNote(e.path).catch(fail);
+        clickable(li, () => openNote(e.path).catch(fail));
         ul.append(li);
       }
       box.append(ul);
@@ -1186,7 +1278,7 @@ async function loadConnections() {
   const item = (text: string, kind: string, open: () => void, meta = "") => {
     const li = el("li", {}, swatch(kind), el("span", { className: "name", textContent: text }));
     if (meta) li.append(el("span", { className: "meta", textContent: meta }));
-    li.onclick = open;
+    clickable(li, open);
     return li;
   };
   const kindOf = (path: string) => worldEntities.find((e) => e.path === path)?.kind ?? "note";
@@ -1283,7 +1375,7 @@ function currentBook(): Book | null {
     return {
       title: ms.title,
       author: settings.author,
-      chapters: ms.blocks.map((b) => ({
+      chapters: ms.blocks.filter((b) => !b.out).map((b) => ({
         title: b.raw ? null : b.title,
         text: (b.variants.find((v) => v.id === b.live) ?? b.variants[b.variants.length - 1])?.text ?? "",
       })),
@@ -1376,7 +1468,7 @@ async function runExport() {
       if (typeof dir !== "string") return;
       await exportAudio(book, dir);
     } else {
-      const names: Record<string, string> = { md: "Markdown", txt: "Text", epub: "EPUB", pdf: "PDF" };
+      const names: Record<string, string> = { md: "Markdown", txt: "Text", epub: "EPUB", pdf: "PDF", docx: "Word", odt: "OpenDocument", rtf: "Rich Text", html: "Web page" };
       const path = await save({ defaultPath: `${book.title}.${format}`, filters: [{ name: names[format], extensions: [format] }] });
       if (!path) return;
       progress.textContent = format === "pdf" ? "Typesetting…" : "Writing…";
@@ -1392,35 +1484,51 @@ async function runExport() {
   }
 }
 
+/** Is this cut the current one: the same pages in, in its order, with its live takes? */
 function cutMatches(cut: { order: string[]; picks: Record<string, string> }) {
   if (!ms) return false;
-  return (
-    cut.order.length === ms.blocks.length &&
-    ms.blocks.every((b, i) => cut.order[i] === b.id && (cut.picks[b.id] ?? b.live) === b.live)
-  );
+  const kept = ms.blocks.filter((b) => !b.out);
+  return cut.order.length === kept.length && kept.every((b, i) => cut.order[i] === b.id && (cut.picks[b.id] ?? b.live) === b.live);
 }
 
 function renderCuts() {
   const list = $("list-cuts");
   list.replaceChildren();
   if (!ms) return;
-  if (!ms.cuts.length) list.append(el("li", { className: "hint", textContent: "Save the current order and live versions as a named cut." }));
-  for (const cut of ms.cuts) {
+  if (!ms.cuts.length) {
+    list.append(el("li", { className: "hint", textContent: "Save the pages that are in, their order and ★ live versions, as a named cut." }));
+  }
+  ms.cuts.forEach((cut, at) => {
     const li = el(
       "li",
-      { className: cutMatches(cut) ? "active" : "", title: "Apply this cut" },
+      { className: cutMatches(cut) ? "active" : "", title: `Apply this cut: its ${cut.order.length} pages in its order, the rest left out` },
       el("span", { className: "name", textContent: cut.name }),
-      confirmButton("×", () => op(api.cutOp(ms!.id, "delete", cut.name))),
+      el("span", { className: "meta", textContent: String(cut.order.length) }),
+      Object.assign(confirmButton("×", () => deleteCut(cut, at)), { title: "Delete this cut (click twice; Undo brings it back). Pages are untouched." }),
     );
-    li.onclick = () => applyCut(cut.name);
+    clickable(li, () => applyCut(cut.name));
     list.append(li);
-  }
+  });
 }
 
 async function applyCut(name: string) {
   if (!ms) return;
   await flushSaves();
-  if (await op(api.cutOp(ms.id, "apply", name))) toast(`Applied cut “${name}”.`);
+  const m = await op(api.cutOp(ms.id, "apply", name));
+  if (!m) return;
+  const left = m.blocks.filter((b) => b.out).length;
+  toast(`Applied cut “${name}”.${left ? ` ${left} page${left === 1 ? "" : "s"} left out.` : ""}`);
+}
+
+/** Deleting a cut never touches pages, and can be undone for a few seconds. */
+async function deleteCut(cut: Cut, at: number) {
+  if (!ms) return;
+  const id = ms.id;
+  if (!(await op(api.cutOp(id, "delete", cut.name)))) return;
+  toast(`Deleted cut “${cut.name}”. Your pages are untouched.`, false, {
+    label: "Undo",
+    run: () => op(api.restoreCut(id, cut, at)).then((m) => m && toast(`Cut “${cut.name}” is back.`)),
+  });
 }
 
 function renderNotes() {
@@ -1431,7 +1539,7 @@ function renderNotes() {
       className: doc?.kind === "note" && doc.path === n.path ? "active" : "",
       title: n.path,
     }, el("span", { className: "name", textContent: n.path.replace(/\.md$/, "") }));
-    li.onclick = () => openNote(n.path).catch(fail);
+    clickable(li, () => openNote(n.path).catch(fail));
     list.append(li);
   }
   if (!notes.length) list.append(el("li", { className: "hint", textContent: "No notes yet." }));
@@ -1446,13 +1554,16 @@ function renderLexicon() {
       {},
       el("span", { className: "name", textContent: word }),
       el("span", { className: "meta", textContent: say }),
-      confirmButton("×", () => {
-        delete lexicon[word];
-        saveLexicon();
-      }),
+      Object.assign(
+        confirmButton("×", () => {
+          delete lexicon[word];
+          saveLexicon();
+        }),
+        { title: "Remove this pronunciation (click twice)" },
+      ),
     );
     li.title = "Hear it";
-    li.onclick = () => narrator.play(sentences(word).map((s) => ({ ...s, highlight: false })));
+    clickable(li, () => narrator.play(sentences(word).map((s) => ({ ...s, highlight: false }))));
     list.append(li);
   }
 }
@@ -1488,7 +1599,7 @@ async function loadManuscripts() {
     const remove = confirmButton("×", () => deleteManuscript(m.id, m.title).catch(fail));
     remove.title = "Delete this manuscript (click twice; Undo brings it back)";
     li.append(remove);
-    li.onclick = () => openManuscript(m.id).catch(fail);
+    clickable(li, () => openManuscript(m.id).catch(fail));
     list.append(li);
   }
   if (!all.length) list.append(el("li", { className: "hint", textContent: "Import a script, or every draft of one, to start." }));
@@ -1659,10 +1770,147 @@ const refreshCadence = debounce(() => runCadence(), 700);
 async function runCadence() {
   if (doc?.kind !== "block") return;
   const text = editor.text;
-  const c = await api.cadence(text).catch(() => null);
+  const c = await api.cadence(text, ms?.id ?? null).catch(() => null);
   if (!c || doc?.kind !== "block" || editor.text !== text) return;
   editor.setCadence(cadenceMarks ? c.flags : null);
   renderCadence(c);
+  renderProgress();
+}
+
+// ---------- page properties ----------
+
+/** The row being edited, and the rows as edited so far (with any new one). */
+let propEdit: number | null = null;
+let propDraft: Prop[] | null = null;
+
+/** Text with each `[[link]]` made clickable. */
+function linked(text: string): Node[] {
+  return text.split(/(\[\[[^\]]+\]\])/).filter(Boolean).map((part) => {
+    const m = part.match(/^\[\[([^\]]+)\]\]$/);
+    if (!m) return document.createTextNode(part);
+    const a = el("a", { href: "#", textContent: m[1], title: `Open ${m[1]}` });
+    a.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openPageLink(m[1]).catch(fail);
+    };
+    return a;
+  });
+}
+
+function renderProps() {
+  const box = $("props");
+  box.replaceChildren();
+  const block = currentBlock();
+  if (doc?.kind !== "block" || !block || !ms) return;
+  // Names used elsewhere in this manuscript, offered while typing one.
+  const keys = [...new Set(ms.blocks.flatMap((b) => b.props.map((p) => p.key)))].sort();
+  $("prop-keys").replaceChildren(...keys.map((k) => el("option", { value: k })));
+  const rows = propDraft ?? block.props;
+  rows.forEach((p, i) => {
+    if (i === propEdit) return box.append(propEditor(block.id, rows, i));
+    const row = el("div", { className: "prop", title: "Click to edit" }, el("span", { className: "k", textContent: p.key }), el("span", { className: "v" }, ...linked(p.value)));
+    clickable(row, () => {
+      propDraft = rows.map((x) => ({ ...x }));
+      propEdit = i;
+      renderProps();
+    });
+    box.append(row);
+  });
+  if (propEdit === null) {
+    const add = el("button", { className: "ghost add-prop", type: "button", textContent: "+ Property", title: "Add to this page: verses, POV, setting, [[a note]] or [[Manuscript#Page]]. Search finds them; export leaves them out." });
+    add.onclick = () => {
+      propDraft = [...block.props.map((x) => ({ ...x })), { key: "", value: "" }];
+      propEdit = propDraft.length - 1;
+      renderProps();
+    };
+    box.append(add);
+  }
+}
+
+function propEditor(blockId: string, rows: Prop[], i: number): HTMLElement {
+  const k = el("input", { className: "k", value: rows[i].key, placeholder: "name", spellcheck: false });
+  k.setAttribute("list", "prop-keys");
+  const v = el("input", { className: "v", value: rows[i].value, placeholder: "value, [[a note]] or [[Manuscript#Page]]" });
+  const del = el("button", { className: "ghost", type: "button", textContent: "×", title: "Remove this property" });
+  const row = el("div", { className: "prop editing" }, k, v, del);
+  let done = false;
+  const finish = (how: "save" | "remove" | "cancel") => {
+    if (done) return;
+    done = true;
+    const next = rows.map((x) => ({ ...x }));
+    if (how === "save") next[i] = { key: k.value.trim(), value: v.value.trim() };
+    if (how === "remove") next.splice(i, 1);
+    propEdit = null;
+    propDraft = null;
+    const block = currentBlock();
+    const same = block && JSON.stringify(next.filter((p) => p.key)) === JSON.stringify(block.props);
+    if (how === "cancel" || !ms || !block || block.id !== blockId || same) return renderProps();
+    op(api.setBlockProps(ms.id, blockId, next));
+  };
+  del.onmousedown = (e) => e.preventDefault(); // keep focus, so blur doesn't save first
+  del.onclick = () => finish("remove");
+  for (const input of [k, v]) {
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (input === k && !v.value) v.focus();
+        else finish("save");
+      }
+      if (e.key === "Escape") finish("cancel");
+    };
+  }
+  row.addEventListener("focusout", (e) => {
+    if (!row.contains(e.relatedTarget as Node | null)) finish("save");
+  });
+  requestAnimationFrame(() => (rows[i].key ? v : k).focus());
+  return row;
+}
+
+// ---------- your target ----------
+
+function openTargetDialog() {
+  if (!ms) return;
+  const id = ms.id;
+  const t = ms.target ?? {};
+  const dlg = $<HTMLDialogElement>("dlg-target");
+  const field = (name: string) => $<HTMLInputElement>(`tg-${name}`);
+  const show = (n: number | null | undefined) => (n == null ? "" : String(n));
+  field("chapter-min").value = show(t.chapter_min);
+  field("chapter-max").value = show(t.chapter_max);
+  field("sentence").value = show(t.sentence);
+  field("dialogue").value = t.dialogue == null ? "" : String(Math.round(t.dialogue * 100));
+  field("total").value = show(t.total);
+  dlg.returnValue = "";
+  dlg.showModal();
+  dlg.onclose = () => {
+    if (dlg.returnValue !== "ok" && dlg.returnValue !== "clear") return;
+    const num = (name: string) => {
+      const n = parseFloat(field(name).value);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    };
+    const dialogue = num("dialogue");
+    const target: Target = dlg.returnValue === "clear" ? {} : {
+      chapter_min: num("chapter-min") && Math.round(num("chapter-min")!),
+      chapter_max: num("chapter-max") && Math.round(num("chapter-max")!),
+      sentence: num("sentence"),
+      dialogue: dialogue == null ? null : Math.min(dialogue, 100) / 100,
+      total: num("total") && Math.round(num("total")!),
+    };
+    op(api.setTarget(id, target)).then(() => runCadence());
+  };
+}
+
+/** Words in the manuscript's live takes against the author's goal for it. */
+function renderProgress() {
+  const box = $("ms-progress");
+  const goal = ms?.target?.total;
+  box.hidden = !goal;
+  if (!ms || !goal) return;
+  const n = ms.blocks.filter((b) => !b.out).reduce((sum, b) => sum + words(b.variants.find((v) => v.id === b.live)?.text ?? ""), 0);
+  box.querySelector<HTMLElement>(".bar span")!.style.width = `${Math.min(100, (100 * n) / goal)}%`;
+  box.querySelector(".label")!.textContent = `${n.toLocaleString()} of ${goal.toLocaleString()} words`;
+  box.title = `${Math.round((100 * n) / goal)}% of your target, counting the live take of each page`;
 }
 
 function renderCadence(c: Cadence) {
@@ -1674,14 +1922,21 @@ function renderCadence(c: Cadence) {
   };
   const kids: Node[] = [];
   const band = c.chapter_band;
-  kids.push(stat("words", c.words.toLocaleString(), band ? `chapters ${Math.round(band[0]).toLocaleString()}–${Math.round(band[2]).toLocaleString()}` : undefined));
+  const round = (n: number) => Math.round(n).toLocaleString();
+  const chapters = band && (Math.round(band[0]) === Math.round(band[2]) ? round(band[0]) : `${round(band[0])}–${round(band[2])}`);
+  kids.push(stat("words", c.words.toLocaleString(), chapters ? `chapters ${chapters}` : undefined));
   if (c.sentences) kids.push(stat("median sentence", String(c.sentence_median), c.sentence_target != null ? String(c.sentence_target) : undefined));
   kids.push(stat("dialogue", `${Math.round(c.dialogue * 100)}%`, c.dialogue_target != null ? `${Math.round(c.dialogue_target * 100)}%` : undefined));
   if (c.target_name == null) {
-    const b = el("button", { className: "ghost", type: "button", textContent: "Set a target…" });
-    b.onclick = () => showTab("library");
+    const b = el("button", { className: "ghost", type: "button", textContent: "Set a target…", title: "Your own numbers, or blend books in the Library" });
+    b.onclick = () => openTargetDialog();
     kids.push(b);
   } else {
+    const b = el("button", { className: "ghost", type: "button", textContent: "Target…", title: `Measuring against ${c.target_name}` });
+    b.onclick = () => openTargetDialog();
+    kids.push(b);
+  }
+  if (c.blend) {
     const n = c.flags.length;
     const b = el("button", {
       className: "ghost",
@@ -1857,7 +2112,8 @@ function showSearch(on: boolean) {
 
 /** The snippet with each query word marked. */
 function marked(text: string, words: string[]): Node[] {
-  const esc = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  // Any dash matches any dash, as in search itself.
+  const esc = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[-–—]/g, "[-–—]"));
   const parts = text.split(new RegExp(`(${esc.join("|")})`, "gi"));
   return parts.map((p, i) => (i % 2 ? el("mark", { textContent: p }) : document.createTextNode(p)));
 }
@@ -1879,7 +2135,7 @@ async function runSearch() {
       el("span", { className: "name", textContent: h.title }),
       el("span", { className: "meta", textContent: h.kind === "note" ? "note" : h.context }));
     const li = el("li", { title: h.kind === "note" ? h.path : `${h.context} — ${h.title}` }, head, el("div", { className: "snippet" }, ...marked(h.snippet, words)));
-    li.onclick = async () => {
+    clickable(li, async () => {
       list.querySelectorAll("li.active").forEach((x) => x.classList.remove("active"));
       li.classList.add("active");
       if (h.kind === "note") await openNote(h.path);
@@ -1888,7 +2144,7 @@ async function runSearch() {
         openBlock(h.block, h.take);
       }
       editor.find(words[0]);
-    };
+    });
     list.append(li);
   }
 }
@@ -2046,8 +2302,9 @@ function wire() {
   $("btn-export-open").onclick = () => {
     const book = currentBook();
     if (!book) return toast("Open a manuscript or a note to export.");
+    const left = ms ? ms.blocks.filter((b) => b.out).length : 0;
     $("export-what").textContent = ms
-      ? `The live cut of “${ms.title}”: ${ms.blocks.length} blocks, in outline order, using each block's ★ live version.`
+      ? `The current cut of “${ms.title}”: ${book.chapters.length} pages, in outline order, using each page's ★ live version.${left ? ` ${left} left out.` : ""}`
       : `The note “${book.title}”.`;
     $<HTMLInputElement>("export-author").value = settings.author;
     $("export-progress").textContent = "";

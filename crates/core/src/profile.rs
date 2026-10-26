@@ -759,6 +759,10 @@ pub struct Cadence {
     pub sentence_target: Option<f64>,
     pub dialogue_target: Option<f64>,
     pub target_name: Option<String>,
+    /// A Library blend is set, so the flags mean something.
+    pub blend: bool,
+    /// The author set some of the numbers by hand.
+    pub manual: bool,
     pub flags: Vec<Flag>,
 }
 
@@ -770,7 +774,31 @@ fn utf16(text: &str, byte: usize) -> usize {
 
 /// Measure a scene and flag stretches that drift from the target. One long
 /// sentence is a choice; four in a row is a pattern worth a look.
-pub fn cadence(text: &str, target: Option<&Model>) -> Cadence {
+/// Measure a take against the Library blend and the author's own numbers;
+/// the author's numbers win where both are set.
+pub fn cadence(text: &str, target: Option<&Model>, manual: Option<&crate::manuscript::Target>) -> Cadence {
+    let mut c = measured(text, target);
+    let Some(t) = manual.filter(|t| !t.is_empty()) else { return c };
+    c.manual = true;
+    if t.chapter_min.is_some() || t.chapter_max.is_some() {
+        let lo = t.chapter_min.or(t.chapter_max).unwrap() as f64;
+        let hi = t.chapter_max.or(t.chapter_min).unwrap() as f64;
+        c.chapter_band = Some((lo, (lo + hi) / 2.0, hi));
+    }
+    if t.sentence.is_some() {
+        c.sentence_target = t.sentence;
+    }
+    if t.dialogue.is_some() {
+        c.dialogue_target = t.dialogue;
+    }
+    c.target_name = Some(match c.target_name.take() {
+        Some(blend) => format!("your numbers, then {blend}"),
+        None => "your numbers".into(),
+    });
+    c
+}
+
+fn measured(text: &str, target: Option<&Model>) -> Cadence {
     let paras = measure(text);
     let sents: Vec<&Sentence> = paras.iter().flat_map(|p| &p.sentences).collect();
     let words: usize = paras.iter().map(|p| p.words).sum();
@@ -785,6 +813,8 @@ pub fn cadence(text: &str, target: Option<&Model>) -> Cadence {
         sentence_target: None,
         dialogue_target: None,
         target_name: None,
+        blend: false,
+        manual: false,
         flags: vec![],
     };
     let Some(t) = target else { return c };
@@ -793,6 +823,7 @@ pub fn cadence(text: &str, target: Option<&Model>) -> Cadence {
     c.sentence_target = Some(ts.sentence_words.median);
     c.dialogue_target = Some(ts.dialogue);
     c.target_name = Some(ts.author.clone());
+    c.blend = true;
     let flag = |from: usize, to: usize, kind: &str, message: String| Flag { from: utf16(text, from), to: utf16(text, to), kind: kind.into(), message };
 
     // Runs of long sentences.
@@ -912,7 +943,7 @@ mod tests {
         assert_eq!(m.summary.sentence_words.p90, 13.0);
 
         let scene = format!("{}\n\nI ran. I hid. I waited.\n", "This one is a far longer sentence with many more words in it. ".repeat(5));
-        let c = cadence(&scene, Some(&m));
+        let c = cadence(&scene, Some(&m), None);
         let kinds: Vec<&str> = c.flags.iter().map(|f| f.kind.as_str()).collect();
         // The five long ones all open with "This"; three "I"s in a row is just first person.
         assert_eq!(kinds.iter().filter(|k| **k == "opener").count(), 5);
@@ -928,7 +959,7 @@ mod tests {
             p
         }, 1.0)], "t", "T", "");
         let text = "“É” xo. Yo said this. Yo said that. Yo said more.";
-        let c = cadence(text, Some(&m));
+        let c = cadence(text, Some(&m), None);
         let f = &c.flags[0];
         let u: Vec<u16> = text.encode_utf16().collect();
         assert_eq!(String::from_utf16(&u[f.from..f.to]).unwrap(), "Yo");
@@ -952,4 +983,20 @@ mod tests {
         }
         println!("{}", serde_json::to_string_pretty(&book_model(&p).summary).unwrap());
     }
+
+    #[test]
+    fn your_own_numbers_win() {
+        use crate::manuscript::Target;
+        let text = "One two three. Four five six seven.";
+        let c = cadence(text, None, Some(&Target { chapter_max: Some(1500), sentence: Some(12.0), ..Default::default() }));
+        assert!(c.manual && !c.blend);
+        assert_eq!(c.chapter_band, Some((1500.0, 1500.0, 1500.0)));
+        assert_eq!(c.sentence_target, Some(12.0));
+        assert_eq!(c.dialogue_target, None);
+        assert_eq!(c.target_name.as_deref(), Some("your numbers"));
+        // An empty target is no target.
+        let c = cadence(text, None, Some(&Target::default()));
+        assert!(!c.manual && c.target_name.is_none());
+    }
+
 }

@@ -1,0 +1,12 @@
+[package]
+name = "writepad-devserver"
+version = "0.1.5"
+edition = "2021"
+description = "Serves the app's commands over HTTP so the UI can run in a normal browser (docs crawls, screenshots)."
+publish = false
+
+[dependencies]
+writepad-core = { path = "../core" }
+serde = "1"
+serde_json = "1"
+tiny_http = "0.12"

@@ -31,7 +31,7 @@
           <span id="lbl-speed">1.00×</span>
         </label>
       </div>
-      <button id="btn-export-open" class="ghost" title="Export as Markdown, text, EPUB, PDF or MP3">Export</button>
+      <button id="btn-export-open" class="ghost" title="Export as Word, PDF, EPUB, OpenDocument, RTF, HTML, Markdown, text or MP3">Export</button>
       <button id="btn-settings" class="ghost" title="Settings">Settings</button>
     </header>
 
@@ -58,6 +58,7 @@
             <button id="btn-back" class="ghost" title="All manuscripts">‹</button>
             <span id="ms-title"></span>
           </div>
+          <div id="ms-progress" class="ms-progress" hidden><div class="bar"><span></span></div><span class="label"></span></div>
           <ul id="outline" class="list outline"></ul>
           <button id="btn-add-block" class="wide" title="Add a chapter after the one you're in">+ New chapter</button>
         </div>
@@ -105,6 +106,8 @@
         </div>
         <div id="variants" class="variants"></div>
         <div id="cadence" class="cadence"></div>
+        <div id="props" class="props"></div>
+        <datalist id="prop-keys"></datalist>
         <div id="format-bar" class="format-bar">
           <button id="fmt-b" class="ghost" type="button" title="Bold (⌘B)"><b>B</b></button>
           <button id="fmt-i" class="ghost" type="button" title="Italic (⌘I)"><i>I</i></button>
@@ -225,8 +228,12 @@
         <h2>Export</h2>
         <p id="export-what" class="hint"></p>
         <div class="formats">
-          <label><input type="radio" name="fmt" value="epub" checked /> EPUB <span class="hint">e-readers</span></label>
+          <label><input type="radio" name="fmt" value="docx" checked /> Word <span class="hint">.docx, for Word, Pages and Google Docs</span></label>
           <label><input type="radio" name="fmt" value="pdf" /> PDF <span class="hint">print-ready, 5.5×8.5″</span></label>
+          <label><input type="radio" name="fmt" value="epub" /> EPUB <span class="hint">e-readers</span></label>
+          <label><input type="radio" name="fmt" value="odt" /> OpenDocument <span class="hint">.odt, for LibreOffice</span></label>
+          <label><input type="radio" name="fmt" value="rtf" /> Rich Text <span class="hint">.rtf, opens almost anywhere</span></label>
+          <label><input type="radio" name="fmt" value="html" /> Web page <span class="hint">.html</span></label>
           <label><input type="radio" name="fmt" value="md" /> Markdown</label>
           <label><input type="radio" name="fmt" value="txt" /> Plain text</label>
           <label><input type="radio" name="fmt" value="mp3" /> MP3 audiobook <span class="hint">one file per chapter, narrated; a screenplay gets its cast's voices</span></label>
@@ -301,6 +308,25 @@
         <div class="actions">
           <button value="cancel">Cancel</button>
           <button value="ok" class="primary">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-target">
+      <form method="dialog">
+        <h2>Your target</h2>
+        <p class="hint">Numbers you want to write toward, for this manuscript. Leave any blank to use your Library blend for it, if you have one.</p>
+        <div class="target-grid">
+          <label class="field">Chapter length, from <span class="hint">(words)</span> <input id="tg-chapter-min" type="number" min="0" step="100" placeholder="1500" /></label>
+          <label class="field">to <input id="tg-chapter-max" type="number" min="0" step="100" placeholder="3000" /></label>
+          <label class="field">Median sentence <span class="hint">(words)</span> <input id="tg-sentence" type="number" min="1" step="1" placeholder="14" /></label>
+          <label class="field">Dialogue <span class="hint">(%)</span> <input id="tg-dialogue" type="number" min="0" max="100" step="5" placeholder="30" /></label>
+          <label class="field">Whole manuscript <span class="hint">(words)</span> <input id="tg-total" type="number" min="0" step="1000" placeholder="80000" /></label>
+        </div>
+        <div class="actions">
+          <button value="clear" class="ghost">Clear</button>
+          <button value="cancel">Cancel</button>
+          <button value="ok" class="primary">Save</button>
         </div>
       </form>
     </dialog>

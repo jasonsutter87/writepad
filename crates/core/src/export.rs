@@ -1,5 +1,6 @@
 //! Export a book (a manuscript's live cut, or a single note) as Markdown,
-//! plain text, EPUB, PDF, or MP3 audio.
+//! plain text, a web page, EPUB, PDF, or MP3 audio; Word, OpenDocument and
+//! RTF live in `office`.
 
 use serde::Deserialize;
 use std::fs;
@@ -279,6 +280,15 @@ pub fn epub(book: &Book, path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// The book as one web page, for reading in a browser or pasting elsewhere.
+fn web_html(book: &Book) -> String {
+    print_html(book).replacen(
+        "<style>",
+        "<style>\n@media screen { body { max-width: 36em; margin: 3em auto !important; padding: 0 1.2em; font-size: 19px; } .titlepage { height: auto !important; margin: 4em 0 2em; } section.chapter { margin-top: 4em; } }\n",
+        1,
+    )
+}
+
 /// A print-ready HTML book: title page, then each chapter on a new page.
 fn print_html(book: &Book) -> String {
     let mut body = format!("<section class=\"titlepage\"><h1>{}</h1>", escape(&book.title));
@@ -350,6 +360,10 @@ pub fn write_book(book: &Book, format: &str, path: &Path, scratch: &Path) -> Res
     match format {
         "md" => fs::write(path, markdown(book)).map_err(|e| e.to_string()),
         "txt" => fs::write(path, plain_text(book)).map_err(|e| e.to_string()),
+        "html" => fs::write(path, web_html(book)).map_err(|e| e.to_string()),
+        "docx" => crate::office::docx(book, path),
+        "odt" => crate::office::odt(book, path),
+        "rtf" => fs::write(path, crate::office::rtf(book)).map_err(|e| e.to_string()),
         "epub" => epub(book, path),
         "pdf" => pdf(book, path, scratch),
         other => Err(format!("Unknown export format: {other}")),

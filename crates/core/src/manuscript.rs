@@ -42,6 +42,46 @@ pub struct BlockMeta {
     /// Front matter: exported as-is, without a `## title` heading.
     #[serde(default)]
     pub raw: bool,
+    /// The page's own properties (verses, POV, links to notes), never exported.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub props: Vec<Prop>,
+    /// Left out of the current cut: kept in the outline, but not exported
+    /// (as text or audio) or counted.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub out: bool,
+}
+
+/// One property of a page: a name and a value, which may hold `[[links]]`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Prop {
+    pub key: String,
+    pub value: String,
+}
+
+/// The numbers the author wants to write toward. Any left out fall back to
+/// the Library blend, if there is one.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct Target {
+    /// Words per chapter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter_min: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter_max: Option<u32>,
+    /// Median sentence length in words.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sentence: Option<f64>,
+    /// Share of words in dialogue, 0 to 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dialogue: Option<f64>,
+    /// Words in the whole manuscript.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<u32>,
+}
+
+impl Target {
+    pub fn is_empty(&self) -> bool {
+        *self == Target::default()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -66,6 +106,8 @@ pub struct Manifest {
     /// Bumped on every structural change.
     #[serde(default)]
     pub rev: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<Target>,
 }
 
 /// A take with its text, as handed to the app.
@@ -88,6 +130,10 @@ pub struct Block {
     pub live: String,
     #[serde(default)]
     pub raw: bool,
+    #[serde(default)]
+    pub props: Vec<Prop>,
+    #[serde(default)]
+    pub out: bool,
 }
 
 /// A whole manuscript with every take's text.
@@ -102,6 +148,8 @@ pub struct Manuscript {
     pub separator: bool,
     #[serde(default)]
     pub rev: u64,
+    #[serde(default)]
+    pub target: Option<Target>,
 }
 
 #[derive(Serialize)]
@@ -237,10 +285,10 @@ pub fn load(vault: &Path, id: &str) -> Result<Manuscript, String> {
                     Ok(Variant { id: v.id, label: v.label, author: v.author, created: v.created, text })
                 })
                 .collect::<Result<Vec<_>, String>>()?;
-            Ok(Block { id: b.id, title: b.title, variants, live: b.live, raw: b.raw })
+            Ok(Block { id: b.id, title: b.title, variants, live: b.live, raw: b.raw, props: b.props, out: b.out })
         })
         .collect::<Result<Vec<_>, String>>()?;
-    Ok(Manuscript { id: m.id, title: m.title, blocks, cuts: m.cuts, separator: m.separator, rev: m.rev })
+    Ok(Manuscript { id: m.id, title: m.title, blocks, cuts: m.cuts, separator: m.separator, rev: m.rev, target: m.target })
 }
 
 pub fn list(vault: &Path) -> Vec<ManuscriptInfo> {
@@ -443,6 +491,27 @@ pub fn set_block_title(vault: &Path, ms: &str, block: &str, title: &str) -> Resu
     })
 }
 
+/// Replace a page's properties. Rows without a name are dropped.
+pub fn set_block_props(vault: &Path, ms: &str, block: &str, props: Vec<Prop>) -> Result<(), String> {
+    let props = props
+        .into_iter()
+        .map(|p| Prop { key: p.key.trim().to_string(), value: p.value.trim().to_string() })
+        .filter(|p| !p.key.is_empty())
+        .collect();
+    update(vault, ms, |m| {
+        block_mut(m, block)?.props = props;
+        Ok(())
+    })
+}
+
+/// Set the author's own target, or clear it with an empty one.
+pub fn set_target(vault: &Path, ms: &str, target: Target) -> Result<(), String> {
+    update(vault, ms, |m| {
+        m.target = (!target.is_empty()).then_some(target);
+        Ok(())
+    })
+}
+
 /// Reorder blocks. Ids missing from `order` keep their relative order at the end,
 /// so a reorder based on a stale outline never drops a block someone just added.
 pub fn set_order(vault: &Path, ms: &str, order: &[String]) -> Result<(), String> {
@@ -454,46 +523,102 @@ pub fn set_order(vault: &Path, ms: &str, order: &[String]) -> Result<(), String>
             }
         }
         m.blocks.extend(rest);
+        settle(m);
         Ok(())
     })
+}
+
+/// Pages left out of the cut sit after the rest, whatever order was asked for.
+fn settle(m: &mut Manifest) {
+    let (kept, out): (Vec<_>, Vec<_>) = std::mem::take(&mut m.blocks).into_iter().partition(|b| !b.out);
+    m.blocks = kept.into_iter().chain(out).collect();
 }
 
 pub fn add_block(vault: &Path, ms: &str, title: &str, after: Option<&str>, author: &str, text: &str) -> Result<BlockMeta, String> {
     let take = VariantMeta { id: new_id(), label: if author.is_empty() { "draft".into() } else { author.to_string() }, author: author.to_string(), created: now() };
     write_atomic(&take_path(vault, ms, &take.id)?, text.as_bytes())?;
     update(vault, ms, |m| {
-        let b = BlockMeta { id: new_id(), title: title.to_string(), live: take.id.clone(), variants: vec![take.clone()], raw: false };
+        let b = BlockMeta { id: new_id(), title: title.to_string(), live: take.id.clone(), variants: vec![take.clone()], raw: false, props: vec![], out: false };
         let at = after.and_then(|a| m.blocks.iter().position(|x| x.id == a)).map_or(m.blocks.len(), |i| i + 1);
         m.blocks.insert(at, b.clone());
+        settle(m);
         Ok(b)
     })
 }
 
-/// Remove a block. Its takes go to the trash (their texts are kept there).
+/// A deleted page, whole: where it sat and everything it had, so
+/// [`restore_block`] can put it back exactly.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TrashedBlock {
+    pub block: BlockMeta,
+    /// The page it sat after (None = first).
+    pub after: Option<String>,
+    pub deleted: u64,
+}
+
+/// `.writepad/trash/<ms>/pages/<block>/`: the record and its takes' files.
+fn page_trash(vault: &Path, ms: &str, block: &str) -> Result<PathBuf, String> {
+    check_id(block)?;
+    Ok(trash_dir(vault, ms)?.join("pages").join(block))
+}
+
+/// Delete a page with every take. It goes to the trash whole, and
+/// [`restore_block`] brings it back where it was.
 pub fn delete_block(vault: &Path, ms: &str, block: &str) -> Result<(), String> {
-    let removed = update(vault, ms, |m| {
+    let record = update(vault, ms, |m| {
         let i = m.blocks.iter().position(|b| b.id == block).ok_or("No such block")?;
-        Ok(m.blocks.remove(i))
+        if m.blocks.len() == 1 {
+            return Err("A manuscript needs at least one page.".into());
+        }
+        let after = i.checked_sub(1).map(|j| m.blocks[j].id.clone());
+        Ok(TrashedBlock { block: m.blocks.remove(i), after, deleted: now() })
     })?;
-    for (i, v) in removed.variants.iter().enumerate() {
-        trash(vault, ms, &Trashed {
-            take: v.clone(),
-            block: removed.id.clone(),
-            block_title: removed.title.clone(),
-            after: i.checked_sub(1).map(|j| removed.variants[j].id.clone()),
-            was_live: removed.live == v.id,
-            deleted: now(),
-        })?;
+    let dir = page_trash(vault, ms, block)?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    for v in &record.block.variants {
+        let from = take_path(vault, ms, &v.id)?;
+        if from.exists() {
+            fs::rename(&from, dir.join(format!("{}.md", v.id))).map_err(|e| e.to_string())?;
+        }
     }
+    write_atomic(&dir.join("page.json"), serde_json::to_string_pretty(&record).map_err(|e| e.to_string())?.as_bytes())
+}
+
+/// Put a deleted page back after the page it followed, with its takes,
+/// properties and place in or out of the cut.
+pub fn restore_block(vault: &Path, ms: &str, block: &str) -> Result<(), String> {
+    let dir = page_trash(vault, ms, block)?;
+    let record: TrashedBlock =
+        serde_json::from_str(&fs::read_to_string(dir.join("page.json")).map_err(|_| "That page isn't in the trash.".to_string())?).map_err(|e| e.to_string())?;
+    for v in &record.block.variants {
+        let file = take_path(vault, ms, &v.id)?;
+        fs::create_dir_all(file.parent().unwrap()).map_err(|e| e.to_string())?;
+        let from = dir.join(format!("{}.md", v.id));
+        if from.exists() {
+            fs::rename(from, file).map_err(|e| e.to_string())?;
+        }
+    }
+    update(vault, ms, |m| {
+        if m.blocks.iter().any(|b| b.id == record.block.id) {
+            return Err("That page is already back.".into());
+        }
+        let at = record.after.as_ref().and_then(|a| m.blocks.iter().position(|b| &b.id == a)).map_or(0, |i| i + 1);
+        m.blocks.insert(at, record.block.clone());
+        settle(m);
+        Ok(())
+    })?;
+    let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
 
+/// Save the pages in the current cut, their order and live takes, by name.
 pub fn save_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     update(vault, ms, |m| {
+        let kept = || m.blocks.iter().filter(|b| !b.out);
         let cut = Cut {
             name: name.to_string(),
-            order: m.blocks.iter().map(|b| b.id.clone()).collect(),
-            picks: m.blocks.iter().map(|b| (b.id.clone(), b.live.clone())).collect(),
+            order: kept().map(|b| b.id.clone()).collect(),
+            picks: kept().map(|b| (b.id.clone(), b.live.clone())).collect(),
         };
         m.cuts.retain(|c| c.name != name);
         m.cuts.push(cut);
@@ -501,6 +626,8 @@ pub fn save_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     })
 }
 
+/// Make a saved cut the current one: its pages in its order with its live
+/// takes. Pages it doesn't list move to the end and are left out.
 pub fn apply_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     update(vault, ms, |m| {
         let cut = m.cuts.iter().find(|c| c.name == name).cloned().ok_or("No such cut")?;
@@ -510,8 +637,10 @@ pub fn apply_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
                 m.blocks.push(rest.remove(i));
             }
         }
+        let kept = m.blocks.len();
         m.blocks.extend(rest);
-        for b in &mut m.blocks {
+        for (i, b) in m.blocks.iter_mut().enumerate() {
+            b.out = i >= kept;
             if let Some(pick) = cut.picks.get(&b.id) {
                 if b.variants.iter().any(|v| &v.id == pick) {
                     b.live = pick.clone();
@@ -525,6 +654,34 @@ pub fn apply_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
 pub fn delete_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     update(vault, ms, |m| {
         m.cuts.retain(|c| c.name != name);
+        Ok(())
+    })
+}
+
+/// Put a deleted cut back where it was in the list (undo).
+pub fn restore_cut(vault: &Path, ms: &str, cut: Cut, at: usize) -> Result<(), String> {
+    update(vault, ms, |m| {
+        if m.cuts.iter().any(|c| c.name == cut.name) {
+            return Err(format!("There's already a cut named “{}”.", cut.name));
+        }
+        m.cuts.insert(at.min(m.cuts.len()), cut);
+        Ok(())
+    })
+}
+
+/// Leave a page out of the current cut, or put it back. Pages left out sit
+/// after the rest: one left out moves to the end, one put back follows the
+/// last page still in.
+pub fn set_block_out(vault: &Path, ms: &str, block: &str, out: bool) -> Result<(), String> {
+    update(vault, ms, |m| {
+        let i = m.blocks.iter().position(|b| b.id == block).ok_or_else(|| format!("No block {block:?}"))?;
+        if m.blocks[i].out == out {
+            return Ok(());
+        }
+        let mut b = m.blocks.remove(i);
+        b.out = out;
+        let at = if out { m.blocks.len() } else { m.blocks.iter().rposition(|b| !b.out).map_or(0, |j| j + 1) };
+        m.blocks.insert(at, b);
         Ok(())
     })
 }
@@ -633,9 +790,9 @@ fn create(vault: &Path, title: &str, blocks: Vec<Block>, cuts: Vec<Cut>, separat
             write_atomic(&take_path(vault, &id, &v.id)?, v.text.as_bytes())?;
             vs.push(VariantMeta { id: v.id, label: v.label, author: v.author, created: v.created });
         }
-        metas.push(BlockMeta { id: b.id, title: b.title, variants: vs, live: b.live, raw: b.raw });
+        metas.push(BlockMeta { id: b.id, title: b.title, variants: vs, live: b.live, raw: b.raw, props: b.props, out: b.out });
     }
-    let m = Manifest { version: 2, id: id.clone(), title: title.trim().to_string(), blocks: metas, cuts, separator, rev: 1 };
+    let m = Manifest { version: 2, id: id.clone(), title: title.trim().to_string(), blocks: metas, cuts, separator, rev: 1, target: None };
     write_manifest(vault, &m)?;
     Ok(id)
 }
@@ -660,6 +817,8 @@ pub fn import(vault: &Path, title: &str, paths: &[String]) -> Result<Manuscript,
                     variants: vec![],
                     live: String::new(),
                     raw: s.title.is_none(),
+                    props: vec![],
+                    out: false,
                 });
                 blocks.len() - 1
             });
@@ -685,7 +844,7 @@ pub fn from_sections(vault: &Path, title: &str, label: &str, sections: Vec<(Stri
         .into_iter()
         .map(|(t, text)| {
             let v = Variant { id: new_id(), label: label.into(), author: String::new(), text, created: now() };
-            Block { id: new_id(), title: t, live: v.id.clone(), variants: vec![v], raw: false }
+            Block { id: new_id(), title: t, live: v.id.clone(), variants: vec![v], raw: false, props: vec![], out: false }
         })
         .collect::<Vec<_>>();
     if blocks.is_empty() {
@@ -726,11 +885,12 @@ fn migrate_v1(vault: &Path, id: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// The current cut as (title, text) chapters: outline order, live takes.
-/// Front matter blocks come back with no title.
+/// The current cut as (title, text) chapters: outline order, live takes,
+/// without pages left out. Front matter blocks come back with no title.
 pub fn cut_chapters(m: &Manuscript) -> Vec<(Option<String>, String)> {
     m.blocks
         .iter()
+        .filter(|b| !b.out)
         .map(|b| {
             let text = b.variants.iter().find(|v| v.id == b.live).or(b.variants.last()).map(|v| v.text.clone()).unwrap_or_default();
             ((!b.raw).then(|| b.title.clone()), text)
@@ -747,6 +907,51 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn a_cut_leaves_out_the_pages_it_doesnt_list() {
+        let vault = temp_vault("cut-out");
+        let pages = ["One", "Two", "Three"].map(|t| (t.to_string(), format!("{t}.")));
+        let id = from_sections(&vault, "Book", "draft_1", pages.to_vec()).unwrap();
+        save_cut(&vault, &id, "All").unwrap();
+        let two = load(&vault, &id).unwrap().blocks[1].id.clone();
+        set_block_out(&vault, &id, &two, true).unwrap();
+        save_cut(&vault, &id, "Short").unwrap();
+        let m = load(&vault, &id).unwrap();
+        assert_eq!(m.cuts[1].order.len(), 2);
+        // A new page after one that's left out is still in, so it goes before the line.
+        let added = add_block(&vault, &id, "Four", Some(&two), "", "Four.").unwrap();
+        let titles: Vec<_> = load(&vault, &id).unwrap().blocks.iter().map(|b| b.title.clone()).collect();
+        assert_eq!(titles, ["One", "Three", "Four", "Two"]);
+        delete_block(&vault, &id, &added.id).unwrap();
+        let back = load(&vault, &id).unwrap();
+        assert!(back.blocks.iter().all(|b| b.id != added.id));
+        restore_block(&vault, &id, &added.id).unwrap();
+        let back = load(&vault, &id).unwrap();
+        let four = back.blocks.iter().find(|b| b.id == added.id).unwrap();
+        assert_eq!(four.variants[0].text, "Four.");
+        assert_eq!(back.blocks.iter().map(|b| b.title.as_str()).collect::<Vec<_>>(), ["One", "Three", "Four", "Two"]);
+        delete_block(&vault, &id, &added.id).unwrap();
+        assert_eq!(cut_chapters(&m).len(), 2);
+
+        let order: Vec<_> = load(&vault, &id).unwrap().blocks.iter().map(|b| b.title.clone()).collect();
+        assert_eq!(order, ["One", "Three", "Two"]);
+        set_block_out(&vault, &id, &two, false).unwrap();
+        assert!(load(&vault, &id).unwrap().blocks.iter().all(|b| !b.out));
+        apply_cut(&vault, &id, "Short").unwrap();
+        let m = load(&vault, &id).unwrap();
+        let titles: Vec<_> = m.blocks.iter().map(|b| (b.title.as_str(), b.out)).collect();
+        assert_eq!(titles, [("One", false), ("Three", false), ("Two", true)]);
+        assert_eq!(cut_chapters(&m).iter().map(|c| c.1.as_str()).collect::<Vec<_>>(), ["One.", "Three."]);
+
+        apply_cut(&vault, &id, "All").unwrap();
+        assert!(load(&vault, &id).unwrap().blocks.iter().all(|b| !b.out));
+
+        let all = load(&vault, &id).unwrap().cuts[0].clone();
+        delete_cut(&vault, &id, "All").unwrap();
+        restore_cut(&vault, &id, all, 0).unwrap();
+        assert_eq!(load(&vault, &id).unwrap().cuts[0].name, "All");
     }
 
     #[test]

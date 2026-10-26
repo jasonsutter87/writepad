@@ -649,7 +649,7 @@ fn timeline_of(e: &Entity, idx: &Index) -> String {
 pub type Telling = HashMap<String, (usize, String)>;
 
 /// Block id -> (position, label of the take it uses), in a manuscript's
-/// current order with its live takes, or in one of its cuts with that cut's
+/// current cut (order, live takes, pages left out skipped), or in one of its cuts with that cut's
 /// picks. A cut tells only the blocks in its order.
 pub fn telling(vault: &Path, ms: &str, cut: Option<&str>) -> Result<(String, Telling), String> {
     let want = ms.trim().to_lowercase();
@@ -657,7 +657,7 @@ pub fn telling(vault: &Path, ms: &str, cut: Option<&str>) -> Result<(String, Tel
     let m = manuscript::manifest(vault, &info.id)?;
     let cut = cut.map(|c| m.cuts.iter().find(|x| x.name == c).ok_or_else(|| format!("No cut {c:?} in {}", m.title))).transpose()?;
     let order: Vec<&str> = match cut {
-        None => m.blocks.iter().map(|b| b.id.as_str()).collect(),
+        None => m.blocks.iter().filter(|b| !b.out).map(|b| b.id.as_str()).collect(),
         Some(c) => c.order.iter().map(String::as_str).collect(),
     };
     let mut out = HashMap::new();
