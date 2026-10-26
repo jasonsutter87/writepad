@@ -1,0 +1,36 @@
+{{ define "main" }}
+<article>
+  <header class="page-hero">
+    <div class="container post-container">
+      <p class="eyebrow mb-2"><a href="/blog/">Blog</a>{{ with .Params.topic }} · {{ . }}{{ end }}</p>
+      <h1>{{ .Title }}</h1>
+      <p class="lede">{{ .Description }}</p>
+      <p class="muted post-byline">
+        {{ .Params.author | default site.Params.author }} ·
+        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "January 2, 2006" }}</time> ·
+        {{ .ReadingTime }} min read
+      </p>
+    </div>
+  </header>
+  <div class="container post-container">
+    <div class="prose-page">
+      {{ .Content }}
+    </div>
+    <aside class="post-cta">
+      <h2>Try it on your own draft</h2>
+      <p>WRITEpad is free and open source, for Mac and Windows.</p>
+      <a href="/download/" class="wp-btn wp-btn--primary">Get WRITEpad free</a>
+    </aside>
+  </div>
+</article>
+
+{{ $related := first 3 (where (where site.RegularPages "Section" "blog") "Permalink" "ne" .Permalink) }}
+{{ with $related }}
+<section class="container post-list" aria-labelledby="more-title">
+  <h2 id="more-title" class="more-title">Keep reading</h2>
+  <div class="post-grid">
+    {{ range . }}{{ partial "post-card.html" . }}{{ end }}
+  </div>
+</section>
+{{ end }}
+{{ end }}

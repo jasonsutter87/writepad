@@ -1,0 +1,5 @@
+{{- /* A screenshot of the app: {{< shot "cuts" "Alt text" "Optional caption" >}} */ -}}
+<figure class="doc-shot">
+  <img src="/images/docs/{{ .Get 0 }}.jpg" alt="{{ .Get 1 }}" loading="lazy" decoding="async">
+  {{ with .Get 2 }}<figcaption>{{ . | markdownify }}</figcaption>{{ end }}
+</figure>

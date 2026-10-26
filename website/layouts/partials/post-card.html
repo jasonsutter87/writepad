@@ -1,0 +1,7 @@
+{{/* One blog post as a card: topic, title, summary, date. */}}
+<a class="post-card" href="{{ .RelPermalink }}">
+  {{ with .Params.topic }}<span class="eyebrow">{{ . }}</span>{{ end }}
+  <h2>{{ .Title }}</h2>
+  <p>{{ .Description }}</p>
+  <span class="post-meta">{{ .Date.Format "Jan 2, 2006" }} · {{ .ReadingTime }} min read</span>
+</a>

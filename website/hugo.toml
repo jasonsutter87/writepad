@@ -14,6 +14,9 @@ issuesURL = 'https://github.com/jasonsutter87/writepad/issues'
 # Leave empty and the buy buttons say "Coming soon".
 buyURL = ''
 price = '$5'
+author = 'Jason Sutter'
+# Help topics are grouped on /docs/ in this order (each page sets `group`).
+docGroups = ['Getting started', 'Write and revise', 'Your story world', 'Listen and measure', 'Share your work']
 
 [environments.development]
 baseURL = 'http://localhost:1313/'

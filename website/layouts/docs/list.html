@@ -1,0 +1,28 @@
+{{ define "main" }}
+<section class="page-hero">
+  <div class="container">
+    <p class="eyebrow mb-2">Help</p>
+    <h1>{{ .Params.heading | default .Title }}</h1>
+    <p class="lede">{{ .Description }}</p>
+  </div>
+</section>
+
+<section class="container docs-index">
+  {{ with .Content }}<div class="prose-page docs-intro">{{ . }}</div>{{ end }}
+  {{ $pages := .Pages }}
+  {{ range site.Params.docGroups }}
+  {{ $group := . }}
+  <div class="docs-group">
+    <h2>{{ $group }}</h2>
+    <div class="docs-cards">
+      {{ range (where $pages "Params.group" $group).ByWeight }}
+      <a class="docs-card" href="{{ .RelPermalink }}">
+        <h3>{{ .Title }}</h3>
+        <p>{{ .Description }}</p>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+</section>
+{{ end }}

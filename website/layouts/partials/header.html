@@ -2,6 +2,8 @@
 {{ $current := .RelPermalink }}
 {{ $links := slice
   (dict "url" "/#features" "name" "Features")
+  (dict "url" "/docs/" "name" "Docs")
+  (dict "url" "/blog/" "name" "Blog")
   (dict "url" "/pricing/" "name" "Pricing")
   (dict "url" "/download/" "name" "Download")
   (dict "url" .Site.Params.repoURL "name" "GitHub")
