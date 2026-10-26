@@ -179,6 +179,8 @@ Older single-file manuscripts migrate on first open (kept as `<id>.json.v1`).
   exported (as text or audio) or counted. **Save** names the current cut;
   clicking a cut applies it: its pages in its order, everything else left
   out. Deleting a cut never touches pages, and **Undo** brings it back.
+- **Delete page** (next to the page title) deletes a page with every
+  version. It goes to the trash whole, and **Undo** puts it back where it was.
 
 ## Dictation (murmur-core)
 

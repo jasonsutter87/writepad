@@ -199,6 +199,11 @@ fn delete_block(state: State<AppState>, manuscript: String, block: String) -> Re
 }
 
 #[tauri::command]
+fn restore_block(state: State<AppState>, manuscript: String, block: String) -> Result<Manuscript, String> {
+    changed(&state, &manuscript, |v| manuscript::restore_block(v, &manuscript, &block))
+}
+
+#[tauri::command]
 fn cut_op(state: State<AppState>, manuscript: String, op: String, name: String) -> Result<Manuscript, String> {
     changed(&state, &manuscript, |v| match op.as_str() {
         "save" => manuscript::save_cut(v, &manuscript, &name),
@@ -709,6 +714,7 @@ pub fn run() {
             set_order,
             add_block,
             delete_block,
+            restore_block,
             cut_op,
             restore_cut,
             set_block_out,

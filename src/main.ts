@@ -430,6 +430,12 @@ function openBlock(blockId: string, variantId?: string) {
   }
   compareSnap = null;
   setMode("block");
+  $("note-actions").replaceChildren(
+    Object.assign(
+      confirmButton("Delete page", () => deletePage(block.id)),
+      { title: "Delete this page and all its versions (click twice; Undo brings it back). To set it aside instead, leave it out of the cut." },
+    ),
+  );
   const title = $<HTMLInputElement>("doc-title");
   title.value = block.title;
   title.readOnly = false;
@@ -867,6 +873,29 @@ window.setInterval(() => {
 }, 60_000);
 
 /** Move a note to the trash, with Undo. */
+/** Delete a page with every version, open its neighbour, and offer Undo. */
+async function deletePage(blockId: string) {
+  if (!ms) return;
+  const msId = ms.id;
+  const i = ms.blocks.findIndex((b) => b.id === blockId);
+  const title = ms.blocks[i]?.title ?? "page";
+  await flushSaves();
+  const m = await op(api.deleteBlock(msId, blockId));
+  if (!m) return;
+  const next = m.blocks[Math.min(i, m.blocks.length - 1)];
+  if (next) openBlock(next.id);
+  loadManuscripts().catch(() => {});
+  toast(`Deleted “${title}”.`, false, {
+    label: "Undo",
+    run: async () => {
+      if (!(await op(api.restoreBlock(msId, blockId)))) return;
+      if (ms?.id === msId) openBlock(blockId);
+      loadManuscripts().catch(() => {});
+      toast(`Restored “${title}”.`);
+    },
+  });
+}
+
 async function deleteNote(path: string) {
   await flushSaves();
   pendingNote = null;

@@ -546,22 +546,68 @@ pub fn add_block(vault: &Path, ms: &str, title: &str, after: Option<&str>, autho
     })
 }
 
-/// Remove a block. Its takes go to the trash (their texts are kept there).
+/// A deleted page, whole: where it sat and everything it had, so
+/// [`restore_block`] can put it back exactly.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TrashedBlock {
+    pub block: BlockMeta,
+    /// The page it sat after (None = first).
+    pub after: Option<String>,
+    pub deleted: u64,
+}
+
+/// `.writepad/trash/<ms>/pages/<block>/`: the record and its takes' files.
+fn page_trash(vault: &Path, ms: &str, block: &str) -> Result<PathBuf, String> {
+    check_id(block)?;
+    Ok(trash_dir(vault, ms)?.join("pages").join(block))
+}
+
+/// Delete a page with every take. It goes to the trash whole, and
+/// [`restore_block`] brings it back where it was.
 pub fn delete_block(vault: &Path, ms: &str, block: &str) -> Result<(), String> {
-    let removed = update(vault, ms, |m| {
+    let record = update(vault, ms, |m| {
         let i = m.blocks.iter().position(|b| b.id == block).ok_or("No such block")?;
-        Ok(m.blocks.remove(i))
+        if m.blocks.len() == 1 {
+            return Err("A manuscript needs at least one page.".into());
+        }
+        let after = i.checked_sub(1).map(|j| m.blocks[j].id.clone());
+        Ok(TrashedBlock { block: m.blocks.remove(i), after, deleted: now() })
     })?;
-    for (i, v) in removed.variants.iter().enumerate() {
-        trash(vault, ms, &Trashed {
-            take: v.clone(),
-            block: removed.id.clone(),
-            block_title: removed.title.clone(),
-            after: i.checked_sub(1).map(|j| removed.variants[j].id.clone()),
-            was_live: removed.live == v.id,
-            deleted: now(),
-        })?;
+    let dir = page_trash(vault, ms, block)?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    for v in &record.block.variants {
+        let from = take_path(vault, ms, &v.id)?;
+        if from.exists() {
+            fs::rename(&from, dir.join(format!("{}.md", v.id))).map_err(|e| e.to_string())?;
+        }
     }
+    write_atomic(&dir.join("page.json"), serde_json::to_string_pretty(&record).map_err(|e| e.to_string())?.as_bytes())
+}
+
+/// Put a deleted page back after the page it followed, with its takes,
+/// properties and place in or out of the cut.
+pub fn restore_block(vault: &Path, ms: &str, block: &str) -> Result<(), String> {
+    let dir = page_trash(vault, ms, block)?;
+    let record: TrashedBlock =
+        serde_json::from_str(&fs::read_to_string(dir.join("page.json")).map_err(|_| "That page isn't in the trash.".to_string())?).map_err(|e| e.to_string())?;
+    for v in &record.block.variants {
+        let file = take_path(vault, ms, &v.id)?;
+        fs::create_dir_all(file.parent().unwrap()).map_err(|e| e.to_string())?;
+        let from = dir.join(format!("{}.md", v.id));
+        if from.exists() {
+            fs::rename(from, file).map_err(|e| e.to_string())?;
+        }
+    }
+    update(vault, ms, |m| {
+        if m.blocks.iter().any(|b| b.id == record.block.id) {
+            return Err("That page is already back.".into());
+        }
+        let at = record.after.as_ref().and_then(|a| m.blocks.iter().position(|b| &b.id == a)).map_or(0, |i| i + 1);
+        m.blocks.insert(at, record.block.clone());
+        settle(m);
+        Ok(())
+    })?;
+    let _ = fs::remove_dir_all(&dir);
     Ok(())
 }
 
@@ -878,6 +924,14 @@ mod tests {
         let added = add_block(&vault, &id, "Four", Some(&two), "", "Four.").unwrap();
         let titles: Vec<_> = load(&vault, &id).unwrap().blocks.iter().map(|b| b.title.clone()).collect();
         assert_eq!(titles, ["One", "Three", "Four", "Two"]);
+        delete_block(&vault, &id, &added.id).unwrap();
+        let back = load(&vault, &id).unwrap();
+        assert!(back.blocks.iter().all(|b| b.id != added.id));
+        restore_block(&vault, &id, &added.id).unwrap();
+        let back = load(&vault, &id).unwrap();
+        let four = back.blocks.iter().find(|b| b.id == added.id).unwrap();
+        assert_eq!(four.variants[0].text, "Four.");
+        assert_eq!(back.blocks.iter().map(|b| b.title.as_str()).collect::<Vec<_>>(), ["One", "Three", "Four", "Two"]);
         delete_block(&vault, &id, &added.id).unwrap();
         assert_eq!(cut_chapters(&m).len(), 2);
 

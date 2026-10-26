@@ -358,6 +358,7 @@ export const api = {
   setOrder: (manuscript: string, order: string[]) => invoke<Manuscript>("set_order", { manuscript, order }),
   addBlock: (manuscript: string, title: string, after: string | null) => invoke<Manuscript>("add_block", { manuscript, title, after }),
   deleteBlock: (manuscript: string, block: string) => invoke<Manuscript>("delete_block", { manuscript, block }),
+  restoreBlock: (manuscript: string, block: string) => invoke<Manuscript>("restore_block", { manuscript, block }),
   cutOp: (manuscript: string, op: "save" | "apply" | "delete", name: string) => invoke<Manuscript>("cut_op", { manuscript, op, name }),
   restoreCut: (manuscript: string, cut: Cut, at: number) => invoke<Manuscript>("restore_cut", { manuscript, cut, at }),
   setBlockOut: (manuscript: string, block: string, out: boolean) => invoke<Manuscript>("set_block_out", { manuscript, block, out }),

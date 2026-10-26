@@ -170,6 +170,7 @@ fn call(v: &Path, cmd: &str, a: &Value) -> Result<Value, String> {
         "set_order" => changed(&|m| manuscript::set_order(v, m, &arg::<Vec<String>>(a, "order")?)),
         "add_block" => changed(&|m| manuscript::add_block(v, m, &s("title")?, o("after")?.as_deref(), "", "").map(|_| ())),
         "delete_block" => changed(&|m| manuscript::delete_block(v, m, &s("block")?)),
+        "restore_block" => changed(&|m| manuscript::restore_block(v, m, &s("block")?)),
         "cut_op" => changed(&|m| {
             let name = s("name")?;
             match s("op")?.as_str() {

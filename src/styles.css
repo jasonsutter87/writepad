@@ -492,7 +492,7 @@ svg.telling { display: block; font: 12px var(--ui); }
 
 .title-row { display: flex; align-items: center; gap: 8px; }
 .title-row #doc-title { flex: 1; }
-body:not([data-mode="note"]) #note-actions { display: none; }
+body:not([data-mode="note"]):not([data-mode="block"]) #note-actions { display: none; }
 /* Note properties (frontmatter): quiet metadata, not a heading. */
 .cm-line.cm-fm, .cm-line.cm-fm * { font: 12.5px/1.6 ui-monospace, "SF Mono", Menlo, monospace !important; color: var(--muted) !important; text-decoration: none !important; font-weight: 400 !important; font-style: normal !important; }
 .cm-line.cm-fm { background: color-mix(in srgb, var(--line) 30%, transparent); }
