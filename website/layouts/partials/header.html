@@ -15,18 +15,17 @@
       {{ .Site.Title }}
     </a>
 
-    {{/* Mobile menu button */}}
+    {{/* Mobile menu button: three bars that turn into an X while the menu is open */}}
     <button
       type="button"
-      class="md:hidden bg-transparent border-0 p-2 rounded"
-      aria-label="Toggle navigation menu"
+      class="menu-toggle md:hidden"
+      aria-label="Open menu"
       aria-expanded="false"
       aria-controls="mobile-menu"
-      onclick="document.getElementById('mobile-menu').classList.toggle('hidden'); this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');"
     >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-      </svg>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
+      <span class="menu-toggle__bar" aria-hidden="true"></span>
     </button>
 
     {{/* Desktop menu */}}
@@ -38,10 +37,46 @@
     </ul>
   </nav>
 
-  {{/* Mobile menu (hidden by default) */}}
-  <ul id="mobile-menu" class="hidden list-unstyled md:hidden mt-3 pb-2">
-    {{ range $links }}
-      <li class="py-2" style="border-bottom: 1px solid var(--line)"><a href="{{ .url }}"{{ if hasPrefix .url "http" }} target="_blank" rel="noopener"{{ end }} class="site-header__link block py-1">{{ .name }}</a></li>
-    {{ end }}
-  </ul>
+  {{/* Mobile menu: a full-screen panel under the header bar */}}
+  <nav id="mobile-menu" class="mobile-menu md:hidden" aria-label="Mobile navigation" hidden>
+    <ul class="list-unstyled mobile-menu__links">
+      {{ range $links }}
+        <li><a href="{{ .url }}"{{ if hasPrefix .url "http" }} target="_blank" rel="noopener"{{ end }}{{ if eq .url $current }} aria-current="page"{{ end }}>{{ .name }}</a></li>
+      {{ end }}
+    </ul>
+    <a href="/download/" class="wp-btn wp-btn--primary mobile-menu__cta">Get it free</a>
+  </nav>
 </div>
+
+<script>
+  (function () {
+    var button = document.querySelector('.menu-toggle');
+    var menu = document.getElementById('mobile-menu');
+    if (!button || !menu) return;
+    function set(open) {
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      var header = button.closest('.site-header');
+      if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+      if (open) document.documentElement.classList.add('menu-open');
+      if (open) {
+        menu.hidden = false;
+        requestAnimationFrame(function () { menu.classList.add('is-open'); });
+      } else {
+        menu.classList.remove('is-open');
+        setTimeout(function () {
+          if (menu.classList.contains('is-open')) return;
+          menu.hidden = true;
+          // The header's blur would make the panel fixed to it, so it comes back only once the panel is gone.
+          document.documentElement.classList.remove('menu-open');
+        }, 250);
+      }
+    }
+    button.addEventListener('click', function () { set(button.getAttribute('aria-expanded') !== 'true'); });
+    menu.addEventListener('click', function (e) { if (e.target.closest('a')) set(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && button.getAttribute('aria-expanded') === 'true') { set(false); button.focus(); }
+    });
+    matchMedia('(min-width: 768px)').addEventListener('change', function (m) { if (m.matches) set(false); });
+  })();
+</script>

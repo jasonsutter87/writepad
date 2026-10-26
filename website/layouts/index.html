@@ -135,6 +135,20 @@
   </div>
 </section>
 
+{{/* FROM THE BLOG: the latest posts, so the home page links to them */}}
+{{ with first 3 (where site.RegularPages "Section" "blog").ByDate.Reverse }}
+<section class="home-section" aria-labelledby="blog-title">
+  <div class="container">
+    <p class="eyebrow mb-2">From the blog</p>
+    <h2 id="blog-title" class="home-section__title">Notes on working a draft over</h2>
+    <div class="post-grid mt-4">
+      {{ range . }}{{ partial "post-card.html" . }}{{ end }}
+    </div>
+    <p class="mt-4 mb-0"><a href="/blog/" class="wp-btn wp-btn--ghost">All posts</a></p>
+  </div>
+</section>
+{{ end }}
+
 {{/* CLOSING CTA */}}
 <section class="home-section home-cta">
   <div class="container text-center">

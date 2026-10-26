@@ -489,7 +489,18 @@
     margin-bottom: 0.25rem;
   }
 
-  .muted { flex-grow: 1; }
+  .muted { flex-grow: 1; margin-bottom: 1.25rem; }
+}
+
+// First launch, narration, demo and build notes: two columns under the cards.
+.download-help {
+  display: grid;
+  gap: 0 3rem;
+  margin-top: 1rem;
+
+  @include md { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .prose-page { max-width: none; padding-bottom: 1rem; }
 }
 
 // --------------------------------------------------------------------------

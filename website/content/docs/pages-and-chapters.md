@@ -26,9 +26,11 @@ Drag a page by its row (or the **⋮⋮** grip) and drop it above or below anoth
 
 Text before the first chapter heading, like a title page or an epigraph, is kept as **Front matter**. It's exported as it is, without a chapter heading.
 
-## Leave a page out
+## Leave a page out, or delete it
 
 Hover over a page and click **−** to leave it out of the book for now, without deleting it. See [Cuts](/docs/cuts/).
+
+To get rid of a page for good, open it and click **Delete page** next to its title, then click again to confirm. The page goes with every version it had. **Undo** in the message at the bottom of the window puts it back where it was. A manuscript always keeps at least one page.
 
 ## A word goal for the book
 

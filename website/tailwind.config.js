@@ -29,6 +29,9 @@ module.exports = {
     // Focus states for accessibility
     'focus:outline-none', 'focus:ring-2', 'focus:ring-white', 'focus:ring-offset-2',
   ],
+  // The site's own .container (main.scss) sets the column width; Tailwind's
+  // breakpoint containers would override it on pages that load page CSS.
+  corePlugins: { container: false },
   theme: {
     extend: {
       // Bootstrap color names mapped to values

@@ -6,7 +6,9 @@ disableKinds = ['taxonomy', 'term']
 [params]
 CompanyName = 'WRITEpad'
 description = 'A free, open-source writing desk: versions you can onion-skin, local narration, dictation, and a library that measures the books you learn from.'
-version = '0.1.5'
+# The latest published release (GitHub Releases), shown in the footer and the
+# app's structured data. Bump it when a release goes out.
+version = '0.1.4'
 repoURL = 'https://github.com/jasonsutter87/writepad'
 releasesURL = 'https://github.com/jasonsutter87/writepad/releases/latest'
 issuesURL = 'https://github.com/jasonsutter87/writepad/issues'

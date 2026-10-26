@@ -535,3 +535,72 @@ a { color: inherit; }
   code { background: none; padding: 0; font-size: inherit; }
 }
 .prose-page blockquote { margin: 1.25rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); color: var(--muted); }
+
+// ==========================================================================
+// MOBILE MENU: full screen under the header; the hamburger turns into an X
+// ==========================================================================
+
+.menu-toggle {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.menu-toggle__bar {
+  position: absolute;
+  left: 11px;
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.25s ease, opacity 0.2s ease, top 0.25s ease;
+  &:nth-child(1) { top: 15px; }
+  &:nth-child(2) { top: 21px; }
+  &:nth-child(3) { top: 27px; }
+}
+.menu-toggle[aria-expanded="true"] .menu-toggle__bar {
+  &:nth-child(1) { top: 21px; transform: rotate(45deg); }
+  &:nth-child(2) { opacity: 0; transform: scaleX(0.2); }
+  &:nth-child(3) { top: 21px; transform: rotate(-45deg); }
+}
+
+.mobile-menu {
+  position: fixed;
+  inset: var(--header-h, 4.25rem) 0 0 0;
+  z-index: 39;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
+  background: var(--bg);
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease, transform 0.25s ease;
+  &.is-open { opacity: 1; transform: none; }
+  &[hidden] { display: none; }
+}
+.mobile-menu__links {
+  flex: 1;
+  li { border-bottom: 1px solid var(--line); }
+  a {
+    display: block;
+    padding: 1.1rem 0.25rem;
+    font-family: $font-family-serif;
+    font-size: 1.75rem;
+    color: var(--ink);
+    text-decoration: none;
+    &[aria-current="page"] { color: var(--accent); }
+  }
+}
+.mobile-menu__cta { width: 100%; margin-top: 2rem; padding: 1rem; font-size: 1.05rem; }
+html.menu-open { overflow: hidden; }
+// While the menu is open the header bar stays solid, so the two read as one panel.
+html.menu-open .site-header { background: var(--bg); backdrop-filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-toggle__bar, .mobile-menu { transition: none; }
+}

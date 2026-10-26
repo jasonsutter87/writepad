@@ -43,7 +43,7 @@ Hover over a page in the outline and click **−** (*Leave out of this cut*). Th
 To put it back, click **+** on it, or drag it in among the pages above the *Left out of this cut* line. Dragging a page in among the left-out ones leaves it out.
 
 {{< tip >}}
-Leaving a page out never deletes it or any of its versions. It's the way to take a page out of the book while keeping it around.
+Leaving a page out never deletes it or any of its versions. It's the way to take a page out of the book while keeping it around. To delete a page for good, use **Delete page** next to its title (see [Pages and chapters](/docs/pages-and-chapters/)).
 {{< /tip >}}
 
 ## Delete a cut
