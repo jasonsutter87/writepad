@@ -102,7 +102,7 @@ can work on one manuscript at once. Register it with Claude Code:
 
 It uses the vault open in the app unless given `--vault DIR` (or
 `WRITEPAD_VAULT`). Tools: `list_manuscripts`, `outline`, `read`, `fork`, `edit`,
-`write`, `compare`, `set_live`, `add_block`, `list_notes`, `read_note`,
+`write`, `compare`, `set_live`, `add_block`, `search`, `list_notes`, `read_note`,
 `write_note`, `append_note`, `snapshot`, `history`, `export`, `import`.
 
 Rules the tools enforce: an agent writes only takes it created (`force` to
@@ -111,6 +111,14 @@ override when asked), every take carries its agent's name (🤖 in the app),
 The app watches the vault and shows agents' takes and edits as they land.
 
 Same tools from a shell: `writepad tools`, `writepad call outline '{"manuscript":"the-last-thinker"}'`.
+
+## Search
+
+The box above the sidebar tabs (⌘⇧F) searches every note and every take of
+every manuscript, not just the live ones, so a word only one draft uses still
+turns up; each hit names its take. Every word must match, ignoring case; title
+matches come first. Clicking a hit opens that take with the match selected,
+and the results stay put so you can step through them. Esc or a tab clears it.
 
 ## Storage (v2)
 
@@ -256,20 +264,36 @@ under `world/` (Obsidian-compatible frontmatter):
     world/locations/Unit 12.md
     world/relationships/…          between: ["[[A]]", "[[B]]"], kind
     world/timeline/The van.md      after: "[[previous event]]", when, scenes: ["[[The Last Thinker#1]]"]
+                                   timeline: "1999" (optional), takes: ["Draft 2"] (optional)
 
 - **Graph**: links, relationships, the event chain, and where each name or
   alias appears in the manuscript. Color + shape + label per type
   (validated palette); scenes are an opt-in layer.
 - **Timeline**: a linked list. Each event points at the one before it;
   two events after the same one are a branch. Insert between, drag to
-  move, remove (the gap closes). § chips show where each event is told, and
-  "told earlier" flags events the book tells out of order.
+  move, remove (the gap closes). § chips show where each event is told.
+- **Named timelines**: `timeline: 1999` on an event starts a timeline, and
+  the events after it inherit it: a parallel world, another era, a story
+  within the story. Each is its own section with its own start. An event
+  that names a different timeline from the one it follows branches into it
+  ("branches from X"). **+ New timeline** starts one; dragging an event
+  after another moves it onto that event's timeline.
+- **Read against** a manuscript or one of its **cuts**: events are compared
+  with that telling's order. The ones outside the longest run told in order
+  are flagged **told earlier** or **told later** (a flashback); events the
+  telling leaves out are dimmed. A cut tells the blocks in its order, with
+  its picked takes. `takes: [Luke]` on an event means only those takes tell
+  it, for a block whose versions don't all include it.
+- **Story vs telling** draws both orders side by side, one line per event;
+  the lines that cut across the rest are the ones told out of order.
 - **In this scene** (while writing) lists who and what is named in the block;
   **Connections** (on an entry) lists relationships, every scene it's in, and
   backlinks. **To look at** flags links with no note yet and names that never
   appear.
-- Agents: `world`, `world_entry`, `scene_cast`, `timeline`, `world_add`,
-  `timeline_add`. What they add arrives as `status: draft`.
+- Agents: `world`, `world_entry`, `scene_cast`, `timeline` (with
+  `manuscript` and `cut` to read against a telling), `world_add`,
+  `timeline_add` (with `timeline` to start or branch into one). What they
+  add arrives as `status: draft`.
 
 ### Filling in the world without AI
 

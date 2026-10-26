@@ -564,19 +564,132 @@ pub struct TimelineEvent {
     pub status: Option<String>,
     /// Path of the event this one follows, if any.
     pub after: Option<String>,
-    /// 0 for the main line; 1+ for branches.
+    /// Which timeline it's on: "" for the main one, else the `timeline:` name
+    /// set on it or on an event before it.
+    pub timeline: String,
+    /// 0 for a timeline's main line; 1+ for branches.
     pub lane: usize,
     /// Scenes it happens in: (manuscript id, block id, label, position in the manuscript).
     pub scenes: Vec<(String, String, String, usize)>,
     pub people: Vec<String>,
+    /// Where the telling read against tells it first (a block position), or
+    /// None if that telling doesn't tell it.
+    pub told_at: Option<usize>,
+    /// Out of order on its line, told before events that happen earlier.
+    pub told_earlier: bool,
+    /// Out of order on its line, told after events that happen later: a flashback.
+    pub told_later: bool,
 }
 
-/// Events in story order: follow each chain from its start; when an event has
-/// several successors, the first continues the lane and the rest branch off.
+/// Mark the events told out of order on one timeline's main line: those
+/// outside the longest run told in order. Each is "earlier" if told before
+/// the in-order event above it, else "later". On a tie the run keeps the
+/// events that happen first, so a jump ahead reads as told earlier.
+fn flag_order(events: &mut [TimelineEvent]) {
+    let line: Vec<usize> = (0..events.len()).filter(|&i| events[i].lane == 0 && events[i].told_at.is_some()).collect();
+    // Longest non-decreasing run, found backwards so ties keep earlier events.
+    let r: Vec<i64> = line.iter().rev().map(|&i| -(events[i].told_at.unwrap() as i64)).collect();
+    let (mut tails, mut tail_at, mut prev): (Vec<i64>, Vec<usize>, Vec<Option<usize>>) = (vec![], vec![], vec![None; r.len()]);
+    for (k, &x) in r.iter().enumerate() {
+        let p = tails.partition_point(|&t| t <= x);
+        prev[k] = p.checked_sub(1).map(|q| tail_at[q]);
+        if p == tails.len() {
+            tails.push(x);
+            tail_at.push(k);
+        } else {
+            tails[p] = x;
+            tail_at[p] = k;
+        }
+    }
+    let mut keep = vec![false; r.len()];
+    let mut at = tail_at.last().copied();
+    while let Some(k) = at {
+        keep[k] = true;
+        at = prev[k];
+    }
+    let in_order: HashSet<usize> = (0..r.len()).filter(|&k| keep[k]).map(|k| line[line.len() - 1 - k]).collect();
+    let mut above: Option<usize> = None;
+    for &i in &line {
+        let told = events[i].told_at.unwrap();
+        if in_order.contains(&i) {
+            above = Some(told);
+        } else if above.is_some_and(|a| told < a) {
+            events[i].told_earlier = true;
+        } else {
+            events[i].told_later = true;
+        }
+    }
+}
+
+/// The `timeline:` an event sets for itself, if any ("" says the main one).
+fn own_timeline(e: &Entity) -> Option<String> {
+    e.props["timeline"].as_str().map(|t| t.trim().to_string())
+}
+
+/// Which timeline an event is on: its own `timeline:`, else its
+/// predecessor's; "" is the main one.
+fn timeline_of(e: &Entity, idx: &Index) -> String {
+    let mut cur = e;
+    let mut seen = HashSet::new();
+    loop {
+        if let Some(t) = own_timeline(cur) {
+            return t;
+        }
+        if !seen.insert(cur.path.clone()) {
+            return String::new();
+        }
+        match cur.after.iter().find_map(|t| idx.get(t).filter(|p| p.kind == "event")) {
+            Some(p) => cur = p,
+            None => return String::new(),
+        }
+    }
+}
+
+/// Block id -> (position, label of the take it uses).
+pub type Telling = HashMap<String, (usize, String)>;
+
+/// Block id -> (position, label of the take it uses), in a manuscript's
+/// current order with its live takes, or in one of its cuts with that cut's
+/// picks. A cut tells only the blocks in its order.
+pub fn telling(vault: &Path, ms: &str, cut: Option<&str>) -> Result<(String, Telling), String> {
+    let want = ms.trim().to_lowercase();
+    let info = manuscript::list(vault).into_iter().find(|m| m.id == want || m.title.to_lowercase() == want).ok_or_else(|| format!("No manuscript {ms:?}"))?;
+    let m = manuscript::manifest(vault, &info.id)?;
+    let cut = cut.map(|c| m.cuts.iter().find(|x| x.name == c).ok_or_else(|| format!("No cut {c:?} in {}", m.title))).transpose()?;
+    let order: Vec<&str> = match cut {
+        None => m.blocks.iter().map(|b| b.id.as_str()).collect(),
+        Some(c) => c.order.iter().map(String::as_str).collect(),
+    };
+    let mut out = HashMap::new();
+    for id in order {
+        let Some(b) = m.blocks.iter().find(|b| b.id == id) else { continue };
+        let take = cut.and_then(|c| c.picks.get(id)).filter(|t| b.variants.iter().any(|v| &v.id == *t)).unwrap_or(&b.live);
+        let label = b.variants.iter().find(|v| &v.id == take).map(|v| v.label.clone()).unwrap_or_default();
+        let n = out.len();
+        out.insert(b.id.clone(), (n, label));
+    }
+    Ok((info.id, out))
+}
+
+/// Events in story order, read against the manuscript's current order.
 pub fn timeline(vault: &Path) -> Vec<TimelineEvent> {
+    timeline_read(vault, None).unwrap_or_default()
+}
+
+/// Events in story order, one timeline after another (the main one first).
+/// Follow each chain from its start; when an event has several successors,
+/// the first continues the lane and the rest branch off. An event that sets
+/// a different `timeline:` from the one it follows starts that timeline,
+/// branching from there.
+///
+/// `against` is (manuscript, cut) to measure "told earlier" by: positions in
+/// that manuscript, or in that cut of it. Without it, every scene counts at
+/// its position in its own manuscript.
+pub fn timeline_read(vault: &Path, against: Option<(&str, Option<&str>)>) -> Result<Vec<TimelineEvent>, String> {
     let es = entities(vault);
     let idx = Index::new(&es);
     let scenes = scenes(vault);
+    let telling = against.map(|(ms, cut)| telling(vault, ms, cut)).transpose()?;
     let events: Vec<&Entity> = es.iter().filter(|e| e.kind == "event").collect();
     let prev_of = |e: &Entity| e.after.iter().find_map(|t| idx.get(t).filter(|p| p.kind == "event")).map(|p| p.path.clone());
     let mut children: HashMap<String, Vec<&Entity>> = HashMap::new();
@@ -612,41 +725,93 @@ pub fn timeline(vault: &Path) -> Vec<TimelineEvent> {
     }
     roots.sort_by(|a, b| a.when.cmp(&b.when).then(a.name.cmp(&b.name)));
 
+    // Timelines in the order they start: the main one, then named ones by
+    // their first root, then any begun by an event inside another.
+    let mut order: Vec<String> = vec![String::new()];
+    let mut starts: HashMap<String, Vec<&Entity>> = HashMap::new();
+    for r in &roots {
+        let t = own_timeline(r).unwrap_or_default();
+        if !order.contains(&t) {
+            order.push(t.clone());
+        }
+        starts.entry(t).or_default().push(r);
+    }
+
+    // `takes:` on an event names the takes that tell it (by label), for a
+    // block whose versions don't all include it; a telling counts the event
+    // only where it uses one of those takes.
+    let told_at = |e: &Entity| -> Option<usize> {
+        let found = e.scenes.iter().filter_map(|s| find_scene(&scenes, s));
+        let takes: Vec<String> = strings(e.props.get("takes")).iter().map(|t| t.to_lowercase()).collect();
+        match &telling {
+            Some((ms, pos)) => found
+                .filter(|s| &s.ms == ms)
+                .filter_map(|s| pos.get(&s.block))
+                .filter(|(_, label)| takes.is_empty() || takes.contains(&label.to_lowercase()))
+                .map(|(p, _)| *p)
+                .min(),
+            None => found.map(|s| s.index).min(),
+        }
+    };
+
     let mut out = vec![];
     let mut seen: HashSet<String> = HashSet::new();
     let mut lanes = 0usize;
-    // Iterative DFS so long chains can't overflow the stack.
-    let mut stack: Vec<(&Entity, usize)> = roots.iter().rev().map(|r| (*r, 0)).collect();
-    while let Some((e, lane)) = stack.pop() {
-        if !seen.insert(e.path.clone()) {
-            continue;
-        }
-        out.push(TimelineEvent {
-            path: e.path.clone(),
-            name: e.name.clone(),
-            when: e.when.clone(),
-            summary: e.summary.clone(),
-            status: e.status.clone(),
-            after: prev_of(e),
-            lane,
-            scenes: e
-                .scenes
-                .iter()
-                .filter_map(|s| find_scene(&scenes, s))
-                .map(|s| (s.ms.clone(), s.block.clone(), s.label.clone(), s.index))
-                .collect(),
-            people: e.links.iter().filter_map(|l| idx.get(l)).filter(|t| t.kind == "character").map(|t| t.name.clone()).collect(),
-        });
-        if let Some(kids) = children.get(&e.path) {
-            // Push branches first so the main continuation is visited next.
-            for (i, k) in kids.iter().enumerate().rev() {
-                let l = if i == 0 { lane } else {
-                    lanes += 1;
-                    lanes
-                };
-                stack.push((k, l));
+    let mut i = 0;
+    while i < order.len() {
+        let tl = order[i].clone();
+        i += 1;
+        let first = out.len();
+        // Iterative DFS so long chains can't overflow the stack.
+        let mut stack: Vec<(&Entity, usize)> = starts.remove(&tl).unwrap_or_default().into_iter().rev().map(|r| (r, 0)).collect();
+        while let Some((e, lane)) = stack.pop() {
+            if !seen.insert(e.path.clone()) {
+                continue;
+            }
+            out.push(TimelineEvent {
+                path: e.path.clone(),
+                name: e.name.clone(),
+                when: e.when.clone(),
+                summary: e.summary.clone(),
+                status: e.status.clone(),
+                after: prev_of(e),
+                timeline: tl.clone(),
+                lane,
+                scenes: e
+                    .scenes
+                    .iter()
+                    .filter_map(|s| find_scene(&scenes, s))
+                    .map(|s| (s.ms.clone(), s.block.clone(), s.label.clone(), s.index))
+                    .collect(),
+                people: e.links.iter().filter_map(|l| idx.get(l)).filter(|t| t.kind == "character").map(|t| t.name.clone()).collect(),
+                told_at: told_at(e),
+                told_earlier: false,
+                told_later: false,
+            });
+            if let Some(kids) = children.get(&e.path) {
+                // A successor on another timeline starts that one (later).
+                let (same, other): (Vec<&Entity>, Vec<&Entity>) = kids.iter().partition(|k| own_timeline(k).is_none_or(|t| t == tl));
+                for k in other {
+                    let t = own_timeline(k).unwrap_or_default();
+                    if !order.contains(&t) {
+                        order.push(t.clone());
+                    } else if order[..i].contains(&t) {
+                        // That timeline is already laid out: put this start in its own pass.
+                        order.push(t.clone());
+                    }
+                    starts.entry(t).or_default().push(k);
+                }
+                // Push branches first so the main continuation is visited next.
+                for (j, k) in same.iter().enumerate().rev() {
+                    let l = if j == 0 { lane } else {
+                        lanes += 1;
+                        lanes
+                    };
+                    stack.push((k, l));
+                }
             }
         }
+        flag_order(&mut out[first..]);
     }
     // Events caught in a cycle are never reached from a root; list them last.
     for e in events.iter().filter(|e| !seen.contains(&e.path)) {
@@ -657,12 +822,16 @@ pub fn timeline(vault: &Path) -> Vec<TimelineEvent> {
             summary: e.summary.clone(),
             status: Some("cycle".into()),
             after: prev_of(e),
+            timeline: timeline_of(e, &idx),
             lane: 0,
             scenes: vec![],
             people: vec![],
+            told_at: None,
+            told_earlier: false,
+            told_later: false,
         });
     }
-    out
+    Ok(out)
 }
 
 /// Set (or remove, with None) one top-level frontmatter property, editing
@@ -755,8 +924,35 @@ pub fn add(vault: &Path, kind: &str, name: &str, props: &[(String, String)], bod
     Ok(rel)
 }
 
+/// Write (or clear) an event's own `timeline:`.
+fn set_timeline(vault: &Path, path: &str, timeline: Option<&str>) -> Result<(), String> {
+    let text = crate::vault::read(vault, path)?;
+    let value = timeline.map(|t| serde_json::to_string(t).unwrap());
+    let next = set_prop(&text, "timeline", value.as_deref());
+    if next != text {
+        crate::vault::write(vault, path, &next)?;
+    }
+    Ok(())
+}
+
+/// Events about to start a chain (nothing before them any more) keep the
+/// timeline they were on by naming it themselves.
+fn keep_timelines(vault: &Path, es: &[Entity], idx: &Index, paths: &[String]) -> Result<(), String> {
+    for p in paths {
+        if let Some(e) = es.iter().find(|e| &e.path == p) {
+            let t = timeline_of(e, idx);
+            if own_timeline(e).is_none() && !t.is_empty() {
+                set_timeline(vault, p, Some(&t))?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Add a timeline event after `after` (or at the start). With `before`, the
 /// new event is spliced in between: `before` is re-pointed to follow it.
+/// A new first event takes over the timeline of the one it goes before,
+/// unless `props` names a timeline.
 pub fn insert_event(
     vault: &Path,
     name: &str,
@@ -766,18 +962,35 @@ pub fn insert_event(
     body: &str,
 ) -> Result<String, String> {
     let _lock = manuscript::Lock::take(&vault.join(".writepad").join(".timeline.lock"))?;
+    let es = event_entities(vault);
+    let idx = Index::new(&es);
+    let tl_at = |p: &str| es.iter().find(|e| e.path == p).map(|e| timeline_of(e, &idx)).unwrap_or_default();
+    let given = props.iter().find(|(k, _)| k == "timeline").and_then(|(_, v)| serde_json::from_str::<String>(v).ok());
+    let mine = match (&given, after, before) {
+        (Some(t), _, _) => t.clone(),
+        (None, Some(a), _) => tl_at(a),
+        (None, None, Some(b)) => tl_at(b),
+        (None, None, None) => String::new(),
+    };
     if let Some(a) = after {
         props.insert(0, ("after".into(), quote_link(&name_of(a))));
+    } else if given.is_none() && !mine.is_empty() {
+        props.push(("timeline".into(), serde_json::to_string(&mine).unwrap()));
     }
     let rel = add(vault, "event", name, &props, body)?;
     if let Some(b) = before {
+        let was = tl_at(b);
         repoint(vault, &[b.to_string()], Some(name))?;
+        // It now follows the new event: inherit, unless it was on another timeline.
+        set_timeline(vault, b, if was == mine { None } else { Some(&was) })?;
     }
     Ok(rel)
 }
 
 /// Move an event to follow `after` (None = the start): its old successors
 /// close the gap, and with `before` it's spliced in ahead of that event.
+/// Dropped after an event, it joins that event's timeline; moved to the
+/// start ahead of `before`, it takes over that timeline.
 pub fn move_event(vault: &Path, path: &str, after: Option<&str>, before: Option<&str>) -> Result<(), String> {
     let _lock = manuscript::Lock::take(&vault.join(".writepad").join(".timeline.lock"))?;
     let es = event_entities(vault);
@@ -787,13 +1000,28 @@ pub fn move_event(vault: &Path, path: &str, after: Option<&str>, before: Option<
     }
     let idx = Index::new(&es);
     let old_prev = me.after.iter().find_map(|t| idx.get(t)).map(|p| p.name.clone());
+    let succ = successors(&es, path);
+    let before_tl = before.and_then(|b| es.iter().find(|e| e.path == b)).map(|e| timeline_of(e, &idx));
     // Close the gap where it was.
-    repoint(vault, &successors(&es, path), old_prev.as_deref())?;
+    if old_prev.is_none() {
+        keep_timelines(vault, &es, &idx, &succ)?;
+    }
+    repoint(vault, &succ, old_prev.as_deref())?;
     // Splice it in where it goes.
     let after_name = after.map(name_of);
     repoint(vault, &[path.to_string()], after_name.as_deref())?;
+    match after {
+        Some(_) => set_timeline(vault, path, None)?,
+        None => {
+            let t = before_tl.unwrap_or_else(|| timeline_of(me, &idx));
+            set_timeline(vault, path, Some(&t).filter(|t| !t.is_empty()).map(|t| t.as_str()))?
+        }
+    }
     if let Some(b) = before {
         repoint(vault, &[b.to_string()], Some(&me.name))?;
+        if after.is_none() {
+            set_timeline(vault, b, None)?;
+        }
     }
     Ok(())
 }
@@ -807,6 +1035,9 @@ pub fn delete_event(vault: &Path, path: &str) -> Result<String, String> {
     let idx = Index::new(&es);
     let prev = me.after.iter().find_map(|t| idx.get(t)).map(|p| p.name.clone());
     let succ = successors(&es, path);
+    if prev.is_none() {
+        keep_timelines(vault, &es, &idx, &succ)?;
+    }
     repoint(vault, &succ, prev.as_deref())?;
     crate::vault::trash(vault, path, succ)
 }
@@ -890,6 +1121,85 @@ mod tests {
         restore_note(&v, &trash).unwrap();
         assert_eq!(timeline(&v).iter().find(|e| e.name == "C").unwrap().after.as_deref(), Some(b.as_str()));
         let _ = c;
+        fs::remove_dir_all(v).unwrap();
+    }
+
+    #[test]
+    fn named_timelines_keep_their_events() {
+        let v = vault("named-timelines");
+        let tl = |v: &Path| timeline(v).iter().map(|e| (e.name.clone(), e.timeline.clone())).collect::<Vec<_>>();
+        let pair = |n: &str, t: &str| (n.to_string(), t.to_string());
+        let a = insert_event(&v, "A", None, None, vec![], "").unwrap();
+        insert_event(&v, "B", Some(&a), None, vec![], "").unwrap();
+        let x = insert_event(&v, "X", None, None, vec![("timeline".into(), "\"1999\"".into())], "").unwrap();
+        let y = insert_event(&v, "Y", Some(&x), None, vec![], "").unwrap();
+        // Main first, then 1999; Y inherits from X.
+        assert_eq!(tl(&v), [pair("A", ""), pair("B", ""), pair("X", "1999"), pair("Y", "1999")]);
+        // A new first event ahead of X takes over the 1999 timeline.
+        let w = insert_event(&v, "W", None, Some(&x), vec![], "").unwrap();
+        assert_eq!(tl(&v), [pair("A", ""), pair("B", ""), pair("W", "1999"), pair("X", "1999"), pair("Y", "1999")]);
+        // Deleting the first event leaves the rest on 1999.
+        delete_note(&v, &w).unwrap();
+        assert_eq!(tl(&v)[2..], [pair("X", "1999"), pair("Y", "1999")]);
+        // Dragged after B, Y joins the main timeline.
+        move_event(&v, &y, Some(&v.join("world/timeline/B.md").strip_prefix(&v).unwrap().to_string_lossy()), None).unwrap();
+        assert_eq!(tl(&v), [pair("A", ""), pair("B", ""), pair("Y", ""), pair("X", "1999")]);
+        // An event that names another timeline starts it, branching from where it follows.
+        insert_event(&v, "Z", Some(&a), None, vec![("timeline".into(), "\"Mirror\"".into())], "").unwrap();
+        let t = timeline(&v);
+        let z = t.iter().find(|e| e.name == "Z").unwrap();
+        assert_eq!((z.timeline.as_str(), z.lane, z.after.as_deref()), ("Mirror", 0, Some(a.as_str())));
+        assert_eq!(t.last().unwrap().name, "Z", "Mirror starts after the timelines before it");
+        fs::remove_dir_all(v).unwrap();
+    }
+
+    #[test]
+    fn told_earlier_against_a_cut() {
+        let v = vault("telling");
+        let src = v.join("draft.md");
+        fs::write(&src, "## One\n\nFirst.\n\n## Two\n\nSecond.\n\n## Three\n\nThird.\n").unwrap();
+        let m = manuscript::import(&v, "Book", &[src.to_string_lossy().into()]).unwrap();
+        let ev = |name: &str, after: Option<&str>, block: &str| {
+            insert_event(&v, name, after, None, vec![("scenes".into(), format!("[\"[[Book#{block}]]\"]"))], "").unwrap()
+        };
+        let a = ev("A", None, "One");
+        let b = ev("B", Some(&a), "Two");
+        ev("C", Some(&b), "Three");
+        let flags = |t: Vec<TimelineEvent>| t.iter().map(|e| (e.name.clone(), e.told_at, e.told_earlier, e.told_later)).collect::<Vec<_>>();
+        let f = |n: &str, at: Option<usize>, early: bool, late: bool| (n.to_string(), at, early, late);
+        assert_eq!(flags(timeline_read(&v, Some(("Book", None))).unwrap()), [f("A", Some(0), false, false), f("B", Some(1), false, false), f("C", Some(2), false, false)]);
+        // A cut that tells Three first, then One, and leaves Two out.
+        let id = |t: &str| m.blocks.iter().find(|b| b.title == t).unwrap().id.clone();
+        manuscript::update(&v, &m.id, |man| {
+            man.cuts.push(manuscript::Cut { name: "Flashback".into(), order: vec![id("Three"), id("One")], picks: Default::default() });
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            flags(timeline_read(&v, Some(("book", Some("Flashback")))).unwrap()),
+            [f("A", Some(1), false, false), f("B", None, false, false), f("C", Some(0), true, false)]
+        );
+        // Told Two, Three, then One: only One is out of order, a flashback.
+        manuscript::update(&v, &m.id, |man| {
+            man.cuts.push(manuscript::Cut { name: "In medias res".into(), order: vec![id("Two"), id("Three"), id("One")], picks: Default::default() });
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            flags(timeline_read(&v, Some(("Book", Some("In medias res")))).unwrap()),
+            [f("A", Some(2), false, true), f("B", Some(0), false, false), f("C", Some(1), false, false)]
+        );
+        assert!(timeline_read(&v, Some(("Book", Some("Nope")))).is_err());
+        // A second version of the book: B only happens in the first one's take of Two.
+        let src2 = v.join("revised.md");
+        fs::write(&src2, "## One\n\nFirst, again.\n\n## Two\n\nSecond, changed.\n\n## Three\n\nThird, again.\n").unwrap();
+        let m2 = manuscript::import(&v, "Versions", &[src.to_string_lossy().into(), src2.to_string_lossy().into()]).unwrap();
+        let b2 = insert_event(&v, "B2", None, None, vec![("scenes".into(), "[\"[[Versions#Two]]\"]".into()), ("takes".into(), "[\"draft\"]".into())], "").unwrap();
+        let told = |v: &Path| timeline_read(v, Some(("Versions", None))).unwrap().into_iter().find(|e| e.path == b2).unwrap().told_at;
+        assert_eq!(told(&v), None, "the revised take is live, and it doesn't tell B2");
+        let two = m2.blocks.iter().find(|b| b.title == "Two").unwrap();
+        manuscript::set_live(&v, &m2.id, &two.variants[0].id).unwrap();
+        assert_eq!(told(&v), Some(1));
         fs::remove_dir_all(v).unwrap();
     }
 

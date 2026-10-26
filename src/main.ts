@@ -521,7 +521,8 @@ function renderOutline() {
     li.ondragend = () => li.classList.remove("dragging");
     li.ondragover = (e) => {
       e.preventDefault();
-      const below = e.offsetY > li.offsetHeight / 2;
+      const r = li.getBoundingClientRect();
+      const below = e.clientY > r.top + r.height / 2;
       li.classList.toggle("drop-above", !below);
       li.classList.toggle("drop-below", below);
     };
@@ -897,11 +898,14 @@ function renderWorld() {
 }
 
 /** Ask for a new entry's name (and type / time). */
-function askWorld(opts: { title: string; kind?: string; name?: string; event?: boolean }): Promise<{ kind: string; name: string; when: string } | null> {
+function askWorld(opts: { title: string; kind?: string; name?: string; event?: boolean; timeline?: boolean }): Promise<{ kind: string; name: string; when: string; timeline: string } | null> {
   const dlg = $<HTMLDialogElement>("dlg-world");
   $("world-dlg-title").textContent = opts.title;
   $("world-kind-field").hidden = !!opts.event;
   $("world-when-field").hidden = !opts.event;
+  $("world-timeline-field").hidden = !opts.timeline;
+  const tl = $<HTMLInputElement>("world-timeline");
+  tl.value = "";
   const kind = $<HTMLSelectElement>("world-kind");
   if (opts.kind) kind.value = opts.kind;
   const name = $<HTMLInputElement>("world-name");
@@ -910,9 +914,9 @@ function askWorld(opts: { title: string; kind?: string; name?: string; event?: b
   $<HTMLInputElement>("world-when").value = "";
   dlg.returnValue = "";
   dlg.showModal();
-  name.focus();
+  (opts.timeline ? tl : name).focus();
   // Enter means Create (the form's first button is Cancel).
-  name.onkeydown = (e) => {
+  name.onkeydown = tl.onkeydown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       dlg.close("ok");
@@ -921,7 +925,9 @@ function askWorld(opts: { title: string; kind?: string; name?: string; event?: b
   return new Promise((resolve) => {
     dlg.onclose = () => {
       const n = name.value.trim();
-      resolve(dlg.returnValue === "ok" && n ? { kind: opts.event ? "event" : kind.value, name: n, when: $<HTMLInputElement>("world-when").value.trim() } : null);
+      const t = tl.value.trim();
+      const ok = dlg.returnValue === "ok" && n && (!opts.timeline || t);
+      resolve(ok ? { kind: opts.event ? "event" : kind.value, name: n, when: $<HTMLInputElement>("world-when").value.trim(), timeline: t } : null);
     };
   });
 }
@@ -939,14 +945,32 @@ async function newEntry(kind: string, name?: string) {
   }
 }
 
-let timelineCache: { path: string; lane: number }[] = [];
-const lastEventPath = () => [...timelineCache].reverse().find((e) => e.lane === 0)?.path ?? null;
+let timelineCache: { path: string; lane: number; timeline: string; after: string | null }[] = [];
+const lastEventPath = () => [...timelineCache].reverse().find((e) => e.lane === 0 && e.timeline === "")?.path ?? null;
+/** What the timeline is read against ("" or a manuscript id, plus "\n" and a cut), and how it's shown. */
+let timelineAgainst = "";
+let timelineMode: "list" | "chart" = "list";
 
 async function newEvent(after: string | null, before: string | null, scene: [string, string] | null = null) {
   const r = await askWorld({ title: scene ? "New event in this scene" : "New event", event: true });
   if (!r) return;
   try {
     await api.worldInsertEvent(r.name, after, before, r.when || null, scene);
+    await refreshWorldViews();
+    toast(`Added “${r.name}” to the timeline.`);
+  } catch (e) {
+    fail(e);
+  }
+}
+
+/** A new first event for the timeline `before` starts (named `timeline`), or with neither, a whole new timeline. */
+async function startTimeline(before: string | null, timeline: string | null) {
+  const fresh = before === null;
+  const r = await askWorld({ title: fresh ? "New timeline" : `New first event: ${timeline || "Main timeline"}`, event: true, timeline: fresh });
+  if (!r) return;
+  const after = before ? timelineCache.find((e) => e.path === before)?.after ?? null : null;
+  try {
+    await api.worldInsertEvent(r.name, after, before, r.when || null, null, fresh ? r.timeline : timeline);
     await refreshWorldViews();
     toast(`Added “${r.name}” to the timeline.`);
   } catch (e) {
@@ -976,7 +1000,11 @@ async function openTimeline() {
   doc = null;
   setMode("timeline");
   try {
-    const events = await api.worldTimeline();
+    const tellings = await api.worldTellings().catch(() => []);
+    // A telling that's gone (deleted manuscript or cut) falls back to each scene where it is.
+    const [msId, cut] = timelineAgainst.split("\n");
+    if (msId && !tellings.some((t) => t.id === msId && (!cut || t.cuts.includes(cut)))) timelineAgainst = "";
+    const events = await (timelineAgainst ? api.worldTimeline(msId, cut ?? null) : api.worldTimeline());
     timelineCache = events;
     renderTimeline(
       $("timeline-view"),
@@ -985,10 +1013,24 @@ async function openTimeline() {
         open: (path) => openNote(path).catch(fail),
         openScene: (m, b) => openScene(m, b),
         insert: (after, before) => newEvent(after, before),
+        start: (before, timeline) => startTimeline(before, timeline),
         move: (path, after, before) => api.worldMoveEvent(path, after, before).then(refreshWorldViews).catch(fail),
         remove: (path) => deleteNote(path),
       },
       (label, fn) => confirmButton(label, fn),
+      {
+        tellings,
+        against: timelineAgainst,
+        mode: timelineMode,
+        setAgainst: (v) => {
+          timelineAgainst = v;
+          openTimeline();
+        },
+        setMode: (m) => {
+          timelineMode = m;
+          openTimeline();
+        },
+      },
     );
   } catch (e) {
     fail(e);
@@ -1802,7 +1844,63 @@ async function openLibrary() {
   await loadLibrary().catch(fail);
 }
 
+// ---------- search ----------
+
+let searchSeq = 0;
+let sidebarTab = "manuscripts";
+
+function showSearch(on: boolean) {
+  $("pane-search").hidden = !on;
+  for (const t of ["manuscripts", "notes", "world", "library"]) $(`pane-${t}`).hidden = on || t !== sidebarTab;
+  document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.classList.toggle("active", !on && b.dataset.tab === sidebarTab));
+}
+
+/** The snippet with each query word marked. */
+function marked(text: string, words: string[]): Node[] {
+  const esc = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = text.split(new RegExp(`(${esc.join("|")})`, "gi"));
+  return parts.map((p, i) => (i % 2 ? el("mark", { textContent: p }) : document.createTextNode(p)));
+}
+
+async function runSearch() {
+  const query = $<HTMLInputElement>("search").value.trim();
+  const seq = ++searchSeq;
+  if (!query) return showSearch(false);
+  const hits = await api.search(query);
+  if (seq !== searchSeq) return;
+  showSearch(true);
+  const words = query.split(/\s+/);
+  const n = hits.length;
+  $("search-count").textContent = n ? `${n === 200 ? "200+" : n} ${n === 1 ? "match" : "matches"}` : "Nothing matches.";
+  const list = $("list-search");
+  list.replaceChildren();
+  for (const h of hits) {
+    const head = el("div", { className: "hit-head" },
+      el("span", { className: "name", textContent: h.title }),
+      el("span", { className: "meta", textContent: h.kind === "note" ? "note" : h.context }));
+    const li = el("li", { title: h.kind === "note" ? h.path : `${h.context} — ${h.title}` }, head, el("div", { className: "snippet" }, ...marked(h.snippet, words)));
+    li.onclick = async () => {
+      list.querySelectorAll("li.active").forEach((x) => x.classList.remove("active"));
+      li.classList.add("active");
+      if (h.kind === "note") await openNote(h.path);
+      else {
+        if (ms?.id !== h.ms) await openManuscript(h.ms);
+        openBlock(h.block, h.take);
+      }
+      editor.find(words[0]);
+    };
+    list.append(li);
+  }
+}
+
 function showTab(tab: string) {
+  sidebarTab = tab;
+  const search = $<HTMLInputElement>("search");
+  if (search.value) {
+    search.value = "";
+    searchSeq++;
+    showSearch(false);
+  }
   document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   $("pane-manuscripts").hidden = tab !== "manuscripts";
   $("pane-notes").hidden = tab !== "notes";
@@ -1816,6 +1914,22 @@ function showTab(tab: string) {
 
 function wire() {
   document.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => (b.onclick = () => showTab(b.dataset.tab!)));
+  const search = $<HTMLInputElement>("search");
+  search.oninput = debounce(() => runSearch().catch(fail), 150);
+  search.onkeydown = (e) => {
+    if (e.key === "Escape") {
+      search.value = "";
+      runSearch().catch(fail);
+    }
+    if (e.key === "Enter") $("list-search").querySelector<HTMLElement>("li")?.click();
+  };
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      search.focus();
+      search.select();
+    }
+  });
   $("btn-vault").onclick = () => chooseVault().catch(fail);
   $("btn-empty-vault").onclick = () => chooseVault().catch(fail);
   $("btn-back").onclick = closeManuscript;
