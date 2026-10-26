@@ -31,6 +31,13 @@ if (import.meta.env.DEV && !w.__TAURI_INTERNALS__) {
   w.__TAURI_INTERNALS__ = {
     async invoke(cmd, args = {}) {
       if (cmd.startsWith("plugin:")) return plugin[cmd] ?? null;
+      if (cmd === "open_help") {
+        const page = String(args.page ?? "");
+        const path = page === "blog" ? "blog/" : page ? `docs/${page}/` : "docs/";
+        const url = page === "python" ? "https://www.python.org/downloads/" : `https://writepad-app.netlify.app/${path}`;
+        window.open(url, "_blank", "noopener");
+        return null;
+      }
       const res = await fetch(`/api/${cmd}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(args) });
       const body = await res.json();
       if (!res.ok) throw body;

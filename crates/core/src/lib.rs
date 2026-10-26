@@ -2,6 +2,7 @@
 //! CLI and its MCP server all go through here, so they agree on the on-disk
 //! format and can safely work on one vault at the same time.
 
+pub mod comments;
 pub mod diff;
 pub mod epub;
 pub mod export;

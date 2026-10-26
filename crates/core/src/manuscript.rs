@@ -179,7 +179,7 @@ fn check_id(id: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn ms_dir(vault: &Path, id: &str) -> Result<PathBuf, String> {
+pub(crate) fn ms_dir(vault: &Path, id: &str) -> Result<PathBuf, String> {
     check_id(id)?;
     Ok(root(vault).join(id))
 }

@@ -2,7 +2,7 @@ import "./devbridge";
 import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
+import { api, type AudioSegment, type Block, type Book, type Cadence, type Comment, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
 import { applyTheme, contrast, PRESETS } from "./theme";
 import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
@@ -176,6 +176,7 @@ const saveNote = debounce(() => {
 
 /** Write any pending edits now; resolves once they're on disk. */
 function flushSaves(): Promise<unknown> {
+  saveCommentsSoon.flush();
   saveTake.flush();
   saveNote.flush();
   return lastSave;
@@ -183,8 +184,219 @@ function flushSaves(): Promise<unknown> {
 
 // ---------- editor + narration ----------
 
+// ---------- today's words ----------
+
+/** Net words added today, kept per computer: { day, n }. */
+const TODAY_KEY = "wp-today-words";
+const today = () => new Date().toLocaleDateString("en-CA");
+let todayWords = (() => {
+  try {
+    const t = JSON.parse(localStorage.getItem(TODAY_KEY) ?? "null");
+    return t?.day === today() ? Number(t.n) || 0 : 0;
+  } catch {
+    return 0;
+  }
+})();
+/** Words in the open page or note when it was last counted. */
+let countedWords = 0;
+
+function renderToday() {
+  const box = $("today-words");
+  box.hidden = !settings?.vault;
+  box.textContent = `${todayWords.toLocaleString()} word${Math.abs(todayWords) === 1 ? "" : "s"} today`;
+}
+
+/** Count what the writer just typed (or cut) toward today. */
+function countToday(text: string) {
+  const n = words(text);
+  const day = today();
+  try {
+    const saved = JSON.parse(localStorage.getItem(TODAY_KEY) ?? "null");
+    if (saved?.day !== day) todayWords = 0;
+  } catch {
+    /* ignore */
+  }
+  todayWords += n - countedWords;
+  countedWords = n;
+  try {
+    localStorage.setItem(TODAY_KEY, JSON.stringify({ day, n: todayWords }));
+  } catch {
+    /* storage unavailable: the count lasts until the app closes */
+  }
+  renderToday();
+}
+
+// ---------- comments ----------
+
+/** Every comment in the open manuscript (all takes). */
+let comments: Comment[] = [];
+/** The comment open for typing, if any. */
+let editingComment: string | null = null;
+/** Comments whose words can't be found in the text any more. */
+const detached = new Set<string>();
+
+function takeComments(): Comment[] {
+  const d = doc;
+  return d?.kind === "block" ? comments.filter((c) => c.take === d.variantId) : [];
+}
+
+async function loadComments() {
+  comments = ms ? await api.listComments(ms.id).catch(() => []) : [];
+  anchorComments();
+}
+
+/**
+ * Put this take's comments on its words: where they were if the words are
+ * still there, else the nearest place the words appear, else nowhere.
+ */
+function anchorComments() {
+  const text = editor.text;
+  detached.clear();
+  for (const c of takeComments()) {
+    if (text.slice(c.from, c.to) === c.quote) continue;
+    let best = -1;
+    for (let i = text.indexOf(c.quote); i >= 0 && c.quote; i = text.indexOf(c.quote, i + 1)) {
+      if (best < 0 || Math.abs(i - c.from) < Math.abs(best - c.from)) best = i;
+    }
+    if (best >= 0) [c.from, c.to] = [best, best + c.quote.length];
+    else detached.add(c.id);
+  }
+  showComments();
+}
+
+function showComments() {
+  editor.setComments(
+    takeComments()
+      .filter((c) => !c.resolved && !detached.has(c.id))
+      .map((c) => ({ id: c.id, from: c.from, to: c.to, active: c.id === editingComment })),
+  );
+  renderComments();
+}
+
+/** Save this take's comments, with their places moved by the latest edits. */
+async function saveComments() {
+  const d = doc;
+  if (d?.kind !== "block" || !ms) return;
+  const at = editor.commentRanges();
+  const text = editor.text;
+  for (const c of takeComments()) {
+    const r = at.get(c.id);
+    if (r) [c.from, c.to, c.quote] = [r.from, r.to, text.slice(r.from, r.to)];
+    else if (!c.resolved && !detached.has(c.id)) detached.add(c.id);
+  }
+  await api.setComments(ms.id, d.variantId, takeComments().filter((c) => c.text.trim() || c.id === editingComment)).catch(fail);
+}
+const saveCommentsSoon = debounce(() => saveComments(), 1000);
+
+function addComment() {
+  const d = doc;
+  const sel = editor.selection();
+  if (d?.kind !== "block" || !ms) return;
+  if (!sel || !sel.text.trim()) return toast("Select the words you want to comment on first.");
+  const c: Comment = { id: crypto.randomUUID().replace(/-/g, "").slice(0, 12), take: d.variantId, quote: sel.text, from: sel.from, to: sel.to, text: "", author: "", created: Math.floor(Date.now() / 1000), resolved: false };
+  comments.push(c);
+  editingComment = c.id;
+  showComments();
+  $("comments").querySelector<HTMLTextAreaElement>(`[data-id="${c.id}"] textarea`)?.focus();
+}
+
+function openComment(id: string) {
+  const c = comments.find((x) => x.id === id);
+  if (!c) return;
+  editingComment = null;
+  showComments();
+  const row = $("comments").querySelector<HTMLElement>(`[data-id="${id}"]`);
+  row?.scrollIntoView({ block: "nearest" });
+  row?.classList.add("flash");
+  setTimeout(() => row?.classList.remove("flash"), 900);
+}
+
+function renderComments() {
+  const box = $("comments");
+  const list = takeComments();
+  const open = list.filter((c) => !c.resolved);
+  const done = list.filter((c) => c.resolved);
+  box.replaceChildren();
+  if (!list.length) box.append(el("p", { className: "hint", textContent: "Select some words and add a note about them. Comments stay out of the text and the export." }));
+  const row = (c: Comment) => {
+    const li = el("div", { className: `comment${c.resolved ? " resolved" : ""}${detached.has(c.id) ? " detached" : ""}` });
+    li.dataset.id = c.id;
+    const quote = el("button", { type: "button", className: "comment-quote", textContent: `“${c.quote.length > 80 ? `${c.quote.slice(0, 80)}…` : c.quote}”`, title: detached.has(c.id) ? "These words were changed or removed" : "Show these words" });
+    quote.onclick = () => {
+      const r = editor.commentRanges().get(c.id);
+      if (r) editor.select(r.from, r.to);
+    };
+    li.append(quote);
+    if (detached.has(c.id)) li.append(el("p", { className: "hint", textContent: "The words it was on have changed." }));
+    if (c.id === editingComment) {
+      const ta = el("textarea", { value: c.text, placeholder: "Your note… (Enter saves, Shift+Enter for a new line)", rows: 3 });
+      const finish = (keep: boolean) => {
+        editingComment = null;
+        if (keep && ta.value.trim()) c.text = ta.value.trim();
+        if (!c.text.trim()) comments = comments.filter((x) => x !== c);
+        showComments();
+        saveComments();
+      };
+      ta.onkeydown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) (e.preventDefault(), finish(true));
+        if (e.key === "Escape") (e.preventDefault(), e.stopPropagation(), finish(false));
+      };
+      ta.onblur = () => editingComment === c.id && finish(true);
+      li.append(ta);
+    } else {
+      const body = el("p", { className: "comment-text", textContent: c.text, title: "Click to edit" });
+      body.onclick = () => {
+        editingComment = c.id;
+        showComments();
+        $("comments").querySelector<HTMLTextAreaElement>(`[data-id="${c.id}"] textarea`)?.focus();
+      };
+      li.append(body);
+    }
+    const resolve = el("button", { type: "button", className: "ghost", textContent: c.resolved ? "Reopen" : "Resolve", title: c.resolved ? "Show it in the text again" : "Done with it: hide it from the text, keep it here" });
+    resolve.onclick = () => {
+      c.resolved = !c.resolved;
+      showComments();
+      saveComments();
+    };
+    const del = Object.assign(
+      confirmButton("×", () => {
+        comments = comments.filter((x) => x !== c);
+        showComments();
+        saveComments();
+      }),
+      { title: "Delete this comment (click twice)" },
+    );
+    li.append(
+      el("div", { className: "comment-meta" }, el("span", { textContent: `${c.author ? `🤖 ${c.author}` : "You"} · ${when(c.created)}` }), el("span", { className: "spacer" }), resolve, del),
+    );
+    return li;
+  };
+  box.append(...open.map(row));
+  if (done.length) {
+    const more = el("details", { className: "comments-done" }, el("summary", { textContent: `Resolved (${done.length})` }), ...done.map(row));
+    box.append(more);
+  }
+}
+
+// ---------- focus mode ----------
+
+function setFocus(on: boolean) {
+  if (on && document.body.dataset.mode !== "block" && document.body.dataset.mode !== "note") return toast("Open a page or a note to focus on it.");
+  document.body.classList.toggle("focus", on);
+  if (on) editor.focus();
+}
+
 const editor = new Editor($("editor"), {
+  onComment(id) {
+    openComment(id);
+  },
+  onSelect(text) {
+    const n = text ? words(text) : 0;
+    $("sel-words").textContent = n ? `${n.toLocaleString()} word${n === 1 ? "" : "s"} selected` : "";
+  },
   onChange(text) {
+    countToday(text);
+    if (takeComments().length) saveCommentsSoon();
     if (narrator.playing) narrator.stop();
     if (doc?.kind === "note") {
       pendingNote = { path: doc.path, text };
@@ -251,11 +463,25 @@ async function setupNarration() {
     await loadVoices();
     if (voices.length) toast("Narration is ready. Press Listen.");
   } catch (e) {
-    toast(String(e), true);
+    if (/needs Python 3\.10/.test(String(e))) showPythonHelp();
+    else toast(String(e), true);
   } finally {
     settingUp = false;
     btn.disabled = false;
   }
+}
+
+/** No Python 3.10+: say what to install, then try the setup again. */
+function showPythonHelp() {
+  const dlg = $<HTMLDialogElement>("dlg-python");
+  const windows = navigator.userAgent.includes("Windows");
+  dlg.querySelectorAll<HTMLElement>(".win-only").forEach((x) => (x.hidden = !windows));
+  dlg.querySelectorAll<HTMLElement>(".mac-only").forEach((x) => (x.hidden = windows));
+  dlg.returnValue = "";
+  dlg.onclose = () => {
+    if (dlg.returnValue === "retry") setupNarration();
+  };
+  dlg.showModal();
 }
 listen<{ message: string }>("narration-setup", (e) => toast(e.payload.message));
 
@@ -409,6 +635,8 @@ function setMode(mode: Mode) {
     $("props").replaceChildren();
   }
   document.body.dataset.mode = mode;
+  if (mode !== "block" && mode !== "note") document.body.classList.remove("focus");
+  $("sel-words").textContent = "";
   $("empty").hidden = mode !== "none";
   $("graph-view").hidden = mode !== "graph";
   $("timeline-view").hidden = mode !== "timeline";
@@ -440,6 +668,9 @@ function openBlock(blockId: string, variantId?: string) {
   title.value = block.title;
   title.readOnly = false;
   editor.load(variant.text);
+  countedWords = words(variant.text);
+  editingComment = null;
+  anchorComments();
   $("cadence").replaceChildren();
   runCadence();
   loadCast().catch(() => {});
@@ -465,6 +696,7 @@ async function openNote(path: string) {
   title.readOnly = true;
   compareSnap = null;
   editor.load(text);
+  countedWords = words(text);
   loadCast().catch(() => {});
   editor.setOnion(null);
   $("note-actions").replaceChildren(confirmButton("Delete note", () => deleteNote(path)));
@@ -512,6 +744,7 @@ async function openManuscript(id: string) {
   flushSaves();
   ms = await api.loadManuscript(id);
   compareId = null;
+  comments = await api.listComments(id).catch(() => []);
   document.body.classList.add("has-ms");
   $("ms-picker").hidden = true;
   $("ms-outline").hidden = false;
@@ -1331,6 +1564,11 @@ async function onVaultChanged(paths: string[]) {
   }
   const mine = `.writepad/manuscripts/${ms.id}/`;
   if (!paths.some((p) => p.startsWith(mine))) return;
+  // An agent left a comment: show it, unless the writer is typing one.
+  if (paths.includes(`${mine}comments.json`) && !editingComment) {
+    await flushSaves();
+    await loadComments();
+  }
   const fresh = await api.loadManuscript(ms.id).catch(() => null);
   if (!fresh || !ms) return;
   const before = new Map(ms.blocks.flatMap((b) => b.variants.map((v) => [v.id, v] as const)));
@@ -1354,7 +1592,40 @@ listen<string[]>("vault-changed", (e) => onVaultChanged(e.payload));
 
 // Edit ▸ Undo/Redo (⌘Z / ⇧⌘Z). Text fields keep the browser's own undo;
 // otherwise it goes to the editor's history.
+/** The help page for what's on screen. */
+function helpTopic(): string {
+  switch (document.body.dataset.mode) {
+    case "block":
+      return isScreenplay(editor.text) ? "screenplays" : "the-writing-desk";
+    case "note":
+      return "notes";
+    case "graph":
+      return "your-story-world";
+    case "timeline":
+      return "timeline";
+    case "library":
+      return "library-and-targets";
+    default:
+      return "";
+  }
+}
+
+function openHelp(page: string) {
+  api.openHelp(page).catch(fail);
+}
+
+// Any "?" with data-help opens that topic; the top bar's (empty) one follows what's on screen.
+document.addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>("[data-help]");
+  if (!b) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openHelp(b.dataset.help || helpTopic());
+});
+
 listen<string>("menu", (e) => {
+  if (e.payload === "help") return openHelp(helpTopic());
+  if (e.payload === "focus") return setFocus(!document.body.classList.contains("focus"));
   const active = document.activeElement as HTMLElement | null;
   const inField = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") && !active.closest(".cm-editor");
   if (inField) {
@@ -1657,9 +1928,12 @@ async function loadNotes() {
 }
 
 async function loadVault() {
+  renderToday();
   const vault = settings.vault;
   $("btn-vault").textContent = vault ? vault.split(/[\\/]/).pop()! : "No vault";
   $("btn-vault").title = vault ?? "Open a vault folder";
+  $("welcome").hidden = !!vault;
+  $("empty-msg").hidden = !vault;
   if (!vault) {
     setMode("none");
     return;
@@ -1677,10 +1951,30 @@ async function loadVault() {
 async function chooseVault() {
   const dir = await open({ directory: true, title: "Choose a vault folder" });
   if (typeof dir !== "string") return;
+  await useVault(dir);
+}
+
+async function useVault(dir: string) {
   settings.vault = dir;
   await api.saveSettings(settings);
   $<HTMLInputElement>("set-vault").value = dir;
   await loadVault();
+}
+
+/** First run: the demo, opened at its "Start here" note. */
+async function tryDemo() {
+  await useVault(await api.openDemo());
+  if (notes.some((n) => n.path === "Start here.md")) {
+    showTab("notes");
+    await openNote("Start here.md");
+  }
+  toast("This is the demo vault, a copy in Documents/WRITEpad Demo. Change anything you like.");
+}
+
+/** First run: a folder for a first book, and a blank manuscript in it. */
+async function newBook() {
+  await useVault(await api.newBookFolder());
+  await newManuscript();
 }
 
 async function loadVoices() {
@@ -2185,9 +2479,28 @@ function wire() {
       search.focus();
       search.select();
     }
+    if ((e.metaKey || e.ctrlKey) && e.altKey && e.code === "KeyM" && document.body.dataset.mode === "block") {
+      e.preventDefault();
+      addComment();
+    }
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      setFocus(!document.body.classList.contains("focus"));
+    }
+    // Esc leaves focus mode, unless it's busy closing something else first.
+    if (e.key === "Escape" && document.body.classList.contains("focus") && !narrator.playing && !document.querySelector(".cm-search")) {
+      setFocus(false);
+    }
   });
+  $("btn-focus").onclick = () => setFocus(true);
+  $("btn-comment").onclick = () => addComment();
+  $("btn-unfocus").onclick = () => setFocus(false);
   $("btn-vault").onclick = () => chooseVault().catch(fail);
   $("btn-empty-vault").onclick = () => chooseVault().catch(fail);
+  $("btn-open-folder").onclick = () => chooseVault().catch(fail);
+  $("btn-get-python").onclick = () => openHelp("python");
+  $("btn-try-demo").onclick = () => tryDemo().catch(fail);
+  $("btn-new-book").onclick = () => newBook().catch(fail);
   $("btn-back").onclick = closeManuscript;
   $("btn-library-add").onclick = () => addBooks().catch(fail);
   $("btn-script-add").onclick = () => addScript().catch(fail);
@@ -2487,7 +2800,10 @@ async function main() {
   renderVoices();
   setMode("none");
   if (settings.vault) await loadVault().catch(fail);
-  else $("btn-empty-vault").hidden = false;
+  else {
+    $("welcome").hidden = false;
+    $("empty-msg").hidden = true;
+  }
   loadVoices(); // warms the model in the background
 }
 

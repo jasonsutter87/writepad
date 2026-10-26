@@ -6,7 +6,7 @@ mod watch;
 use dictate::{Dictation, Mic, Whisper};
 use manuscript::{Manuscript, ManuscriptInfo};
 use narrate::{Lexicon, Worker};
-use writepad_core::{diff, export, history, manuscript, narrate, profile, script, search, suggest, vault, world};
+use writepad_core::{comments, diff, export, history, manuscript, narrate, profile, script, search, suggest, vault, world};
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -196,6 +196,17 @@ fn add_block(state: State<AppState>, manuscript: String, title: String, after: O
 #[tauri::command]
 fn delete_block(state: State<AppState>, manuscript: String, block: String) -> Result<Manuscript, String> {
     changed(&state, &manuscript, |v| manuscript::delete_block(v, &manuscript, &block))
+}
+
+#[tauri::command]
+fn list_comments(state: State<AppState>, manuscript: String) -> Result<Vec<comments::Comment>, String> {
+    comments::list(&state.vault()?, &manuscript)
+}
+
+/// Save one take's comments, with offsets moved by the latest edits.
+#[tauri::command]
+fn set_comments(state: State<AppState>, manuscript: String, take: String, comments: Vec<comments::Comment>) -> Result<(), String> {
+    writepad_core::comments::set_for_take(&state.vault()?, &manuscript, &take, comments)
 }
 
 #[tauri::command]
@@ -619,6 +630,86 @@ fn restore_note(state: State<AppState>, id: String) -> Result<String, String> {
     world::restore_note(&state.vault()?, &id)
 }
 
+/// The website, for help pages and the blog. Change it here when WRITEpad
+/// gets its own domain.
+const SITE: &str = "https://writepad-app.netlify.app";
+const ISSUES: &str = "https://github.com/jasonsutter87/writepad/issues";
+
+/// Open a page of the website in the browser: a help topic (`"cuts"`), the
+/// help index (`""`), or the blog (`"blog"`). Only these, so a page can't ask
+/// the app to open anything else.
+fn open_site(page: &str) -> Result<(), String> {
+    open_url(&site_url(page).ok_or_else(|| format!("No help page {page:?}"))?)
+}
+
+fn site_url(page: &str) -> Option<String> {
+    Some(match page {
+        "" => format!("{SITE}/docs/"),
+        "blog" => format!("{SITE}/blog/"),
+        "issues" => ISSUES.to_string(),
+        // Narration setup sends people here when they have no Python 3.10+.
+        "python" => "https://www.python.org/downloads/".to_string(),
+        p if p.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') => format!("{SITE}/docs/{p}/"),
+        _ => return None,
+    })
+}
+
+fn open_url(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    let mut cmd = std::process::Command::new("open");
+    #[cfg(target_os = "windows")]
+    let mut cmd = std::process::Command::new("explorer");
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(url).spawn().map(|_| ()).map_err(|e| format!("Couldn't open {url}: {e}"))
+}
+
+#[tauri::command]
+fn open_help(page: String) -> Result<(), String> {
+    open_site(&page)
+}
+
+/// The demo vault that ships inside the app, as a folder the writer owns:
+/// `Documents/WRITEpad Demo`. An existing copy is reused, so edits survive.
+#[tauri::command]
+async fn open_demo(app: AppHandle) -> Result<String, String> {
+    let paths = app.path().clone();
+    blocking(app, move |_| {
+        let from = paths.resolve("demo", tauri::path::BaseDirectory::Resource).map_err(|e| e.to_string())?;
+        let to = paths.document_dir().map_err(|e| e.to_string())?.join("WRITEpad Demo");
+        if !to.join(".writepad").exists() {
+            copy_dir(&from, &to).map_err(|e| format!("Copying the demo: {e}"))?;
+        }
+        Ok(to.to_string_lossy().into_owned())
+    })
+    .await
+}
+
+/// A folder for a first book: `Documents/WRITEpad`, made if it isn't there.
+#[tauri::command]
+fn new_book_folder(app: AppHandle) -> Result<String, String> {
+    let dir = app.path().document_dir().map_err(|e| e.to_string())?.join("WRITEpad");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        if name.to_string_lossy().ends_with(".lock") {
+            continue;
+        }
+        if entry.file_type()?.is_dir() {
+            copy_dir(&entry.path(), &to.join(&name))?;
+        } else {
+            std::fs::copy(entry.path(), to.join(&name))?;
+        }
+    }
+    Ok(())
+}
+
 /// The app menu. Undo/Redo are our own items rather than the system ones:
 /// the system Undo asks WebKit to undo, but the editor keeps its own history,
 /// so the frontend handles these (see "menu" in main.ts).
@@ -652,13 +743,30 @@ fn app_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
             &PredefinedMenuItem::select_all(app, None)?,
         ],
     )?;
+    let view = Submenu::with_items(
+        app,
+        "View",
+        true,
+        &[&MenuItem::with_id(app, "focus", "Focus mode", true, Some("CmdOrCtrl+Shift+D"))?, &PredefinedMenuItem::fullscreen(app, None)?],
+    )?;
     let window = Submenu::with_items(
         app,
         "Window",
         true,
         &[&PredefinedMenuItem::minimize(app, None)?, &PredefinedMenuItem::maximize(app, None)?, &PredefinedMenuItem::close_window(app, None)?],
     )?;
-    Menu::with_items(app, &[&app_menu, &edit, &window])
+    let help = Submenu::with_items(
+        app,
+        "Help",
+        true,
+        &[
+            &MenuItem::with_id(app, "help", "WRITEpad Help", true, Some("CmdOrCtrl+?"))?,
+            &MenuItem::with_id(app, "help:blog", "Writing blog", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "help:issues", "Report a bug…", true, None::<&str>)?,
+        ],
+    )?;
+    Menu::with_items(app, &[&app_menu, &edit, &view, &window, &help])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -686,8 +794,18 @@ pub fn run() {
             app.set_menu(app_menu(app.handle())?)?;
             app.on_menu_event(|app, event| {
                 let id = event.id().as_ref();
-                if id == "undo" || id == "redo" {
-                    let _ = app.emit("menu", id);
+                match id {
+                    "undo" | "redo" | "help" | "focus" => {
+                        // The page knows what's open, so it picks the help topic.
+                        let _ = app.emit("menu", id);
+                    }
+                    "help:blog" => {
+                        let _ = open_site("blog");
+                    }
+                    "help:issues" => {
+                        let _ = open_site("issues");
+                    }
+                    _ => {}
                 }
             });
             Ok(())
@@ -717,6 +835,11 @@ pub fn run() {
             restore_block,
             cut_op,
             restore_cut,
+            open_help,
+            list_comments,
+            set_comments,
+            open_demo,
+            new_book_folder,
             set_block_out,
             import_drafts,
             diff_words,
@@ -770,4 +893,20 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running WRITEpad");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::site_url;
+
+    #[test]
+    fn help_links_stay_on_the_site() {
+        assert_eq!(site_url("cuts").unwrap(), "https://writepad-app.netlify.app/docs/cuts/");
+        assert_eq!(site_url("").unwrap(), "https://writepad-app.netlify.app/docs/");
+        assert_eq!(site_url("blog").unwrap(), "https://writepad-app.netlify.app/blog/");
+        assert_eq!(site_url("python").unwrap(), "https://www.python.org/downloads/");
+        for bad in ["../x", "https://evil.example", "cuts/../../", "Cuts", "a b", "x?y"] {
+            assert_eq!(site_url(bad), None, "{bad}");
+        }
+    }
 }

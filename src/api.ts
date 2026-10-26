@@ -198,6 +198,21 @@ export interface Target {
   total?: number | null;
 }
 
+/** A note in the margin on a take's text, never part of it. Offsets count UTF-16 units, as the editor does. */
+export interface Comment {
+  id: string;
+  take: string;
+  /** The words it's on, as they read when last saved. */
+  quote: string;
+  from: number;
+  to: number;
+  text: string;
+  /** Empty for the author, or an agent's name. */
+  author: string;
+  created: number;
+  resolved: boolean;
+}
+
 export interface Cut {
   name: string;
   order: string[];
@@ -358,6 +373,14 @@ export const api = {
   setOrder: (manuscript: string, order: string[]) => invoke<Manuscript>("set_order", { manuscript, order }),
   addBlock: (manuscript: string, title: string, after: string | null) => invoke<Manuscript>("add_block", { manuscript, title, after }),
   deleteBlock: (manuscript: string, block: string) => invoke<Manuscript>("delete_block", { manuscript, block }),
+  /** Copy the bundled demo vault into Documents (or reuse that copy); returns its folder. */
+  openDemo: () => invoke<string>("open_demo"),
+  /** Make Documents/WRITEpad for a first book; returns its folder. */
+  newBookFolder: () => invoke<string>("new_book_folder"),
+  /** Open a help topic ("cuts"), the help index (""), or the blog ("blog") in the browser. */
+  openHelp: (page: string) => invoke<void>("open_help", { page }),
+  listComments: (manuscript: string) => invoke<Comment[]>("list_comments", { manuscript }),
+  setComments: (manuscript: string, take: string, comments: Comment[]) => invoke<void>("set_comments", { manuscript, take, comments }),
   restoreBlock: (manuscript: string, block: string) => invoke<Manuscript>("restore_block", { manuscript, block }),
   cutOp: (manuscript: string, op: "save" | "apply" | "delete", name: string) => invoke<Manuscript>("cut_op", { manuscript, op, name }),
   restoreCut: (manuscript: string, cut: Cut, at: number) => invoke<Manuscript>("restore_cut", { manuscript, cut, at }),
