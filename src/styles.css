@@ -129,8 +129,9 @@ input[type="range"] { padding: 0; border: none; background: none; accent-color: 
 .inspector { grid-area: inspect; border-left: 1px solid var(--line); }
 .search-box { margin-bottom: 10px; }
 .search-box input { width: 100%; box-sizing: border-box; }
-.search-results li { flex-direction: column; align-items: stretch; gap: 2px; }
-.search-results .hit-head { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.list.search-results li { flex-direction: column; align-items: stretch; gap: 2px; }
+.search-results .hit-head { display: flex; gap: 8px; align-items: baseline; min-width: 0; width: 100%; }
+.search-results .hit-head .meta { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .search-results .snippet { color: var(--muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 .search-results mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--ink); border-radius: 2px; }
 .search-results li.active .snippet { font-weight: 400; }
