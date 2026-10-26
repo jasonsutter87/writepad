@@ -86,7 +86,7 @@ pub fn all() -> Vec<Tool> {
         },
         Tool {
             name: "outline",
-            description: "The manuscript's blocks (chapters/sections) in order. For each block: id, title, the live take (the one in the current cut), and every take with its id, label, author (\"\" = the person) and word count.",
+            description: "The manuscript's blocks (chapters/sections) in order. For each block: id, title, its properties (props), the live take (the one in the current cut), and every take with its id, label, author (\"\" = the person) and word count.",
             schema: || obj(json!({ "manuscript": str_prop(MS) }), &["manuscript"]),
             run: |ctx, a| {
                 let id = s(a, "manuscript")?;
@@ -100,6 +100,7 @@ pub fn all() -> Vec<Tool> {
                             "index": i + 1,
                             "block": b.id,
                             "title": b.title,
+                            "props": b.props,
                             "live": b.live,
                             "takes": b.variants.iter().map(|v| json!({
                                 "take": v.id, "label": v.label, "author": v.author, "words": words(&v.text),
@@ -107,7 +108,7 @@ pub fn all() -> Vec<Tool> {
                         })
                     })
                     .collect();
-                Ok(json!({ "manuscript": m.id, "title": m.title, "blocks": blocks, "cuts": m.cuts.iter().map(|c| &c.name).collect::<Vec<_>>() }))
+                Ok(json!({ "manuscript": m.id, "title": m.title, "blocks": blocks, "cuts": m.cuts.iter().map(|c| &c.name).collect::<Vec<_>>(), "target": m.target }))
             },
         },
         Tool {
@@ -386,6 +387,50 @@ pub fn all() -> Vec<Tool> {
             run: |ctx, a| Ok(json!(script::adapt(&ctx.vault, s(a, "book")?, s(a, "script")?)?)),
         },
         Tool {
+            name: "set_props",
+            description: "Replace a page's (block's) properties: name/value pairs such as verses, POV or setting, never exported. A value may hold [[links]] to notes or to [[Manuscript#Page]]. Search finds them. Pass every property to keep; ones left out are removed.",
+            schema: || {
+                obj(
+                    json!({
+                        "manuscript": str_prop(MS),
+                        "block": str_prop("Block id or title."),
+                        "props": { "type": "array", "items": { "type": "object", "properties": { "key": { "type": "string" }, "value": { "type": "string" } }, "required": ["key", "value"] } }
+                    }),
+                    &["manuscript", "block", "props"],
+                )
+            },
+            run: |ctx, a| {
+                let id = s(a, "manuscript")?;
+                let m = ms::manifest(&ctx.vault, id)?;
+                let (block, _) = resolve_take(&m, opt(a, "block"), None)?;
+                let props: Vec<ms::Prop> = serde_json::from_value(a.get("props").cloned().unwrap_or_default()).map_err(|e| e.to_string())?;
+                ms::set_block_props(&ctx.vault, id, &block, props)?;
+                Ok(json!({ "ok": true }))
+            },
+        },
+        Tool {
+            name: "set_target",
+            description: "Set the author's own target for a manuscript: chapter_min/chapter_max (words per chapter), sentence (median words), dialogue (share, 0 to 1), total (words in the manuscript). These win over the Library blend; omit all to clear. Only set what the author asked for.",
+            schema: || {
+                obj(
+                    json!({
+                        "manuscript": str_prop(MS),
+                        "chapter_min": { "type": "integer" },
+                        "chapter_max": { "type": "integer" },
+                        "sentence": { "type": "number" },
+                        "dialogue": { "type": "number" },
+                        "total": { "type": "integer" }
+                    }),
+                    &["manuscript"],
+                )
+            },
+            run: |ctx, a| {
+                let t: ms::Target = serde_json::from_value(a.clone()).map_err(|e| e.to_string())?;
+                ms::set_target(&ctx.vault, s(a, "manuscript")?, t.clone())?;
+                Ok(json!({ "target": t }))
+            },
+        },
+        Tool {
             name: "cadence",
             description: "Lint one take against the target profile: its word count vs. the target's chapter lengths, median sentence, dialogue share, and flagged stretches (runs of long sentences, outlier sentences, dense paragraphs, repeated sentence openers), each with the flagged text. Flags are prompts for the author's judgement, not errors.",
             schema: || obj(json!({ "manuscript": str_prop(MS), "block": str_prop("Block id or title."), "take": str_prop("Take id.") }), &["manuscript"]),
@@ -394,7 +439,7 @@ pub fn all() -> Vec<Tool> {
                 let m = ms::manifest(&ctx.vault, id)?;
                 let (_, take) = resolve_take(&m, opt(a, "block"), opt(a, "take"))?;
                 let text = ms::read_take(&ctx.vault, id, &take)?;
-                let c = profile::cadence(&text, profile::target(&ctx.vault).as_ref());
+                let c = profile::cadence(&text, profile::target(&ctx.vault).as_ref(), m.target.as_ref());
                 let u: Vec<u16> = text.encode_utf16().collect();
                 let flags: Vec<Value> = c
                     .flags
@@ -613,10 +658,10 @@ pub fn all() -> Vec<Tool> {
         },
         Tool {
             name: "export",
-            description: "Export the manuscript's current cut (block order, live takes) to a file: md, txt, epub or pdf.",
+            description: "Export the manuscript's current cut (block order, live takes) to a file: md, txt, html, docx (Word), odt (OpenDocument), rtf, epub or pdf.",
             schema: || {
                 obj(
-                    json!({ "manuscript": str_prop(MS), "format": { "type": "string", "enum": ["md", "txt", "epub", "pdf"] },
+                    json!({ "manuscript": str_prop(MS), "format": { "type": "string", "enum": ["md", "txt", "html", "docx", "odt", "rtf", "epub", "pdf"] },
                             "path": str_prop("Output file path (absolute, or relative to the vault)."), "author": str_prop("Byline.") }),
                     &["manuscript", "format", "path"],
                 )

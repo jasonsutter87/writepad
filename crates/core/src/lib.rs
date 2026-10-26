@@ -8,6 +8,7 @@ pub mod export;
 pub mod history;
 pub mod manuscript;
 pub mod narrate;
+pub mod office;
 pub mod pdf;
 pub mod profile;
 pub mod script;

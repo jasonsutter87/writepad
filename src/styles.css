@@ -529,6 +529,31 @@ body:not([data-mode="note"]) #note-actions { display: none; }
 .cadence { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12px; color: var(--muted); padding: 2px 0 6px; }
 .cadence b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .cadence button { font-size: 11px; padding: 1px 8px; }
+
+/* page properties */
+.props { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 12px; padding: 0 0 6px; }
+.props:empty { display: none; }
+.prop { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; }
+.prop:hover { border-color: var(--muted); }
+.prop .k { color: var(--muted); }
+.prop .v { color: var(--ink); overflow-wrap: anywhere; }
+.prop .v a { color: var(--accent); text-decoration: none; }
+.prop .v a:hover { text-decoration: underline; }
+.prop.editing { cursor: default; border-radius: 8px; padding: 2px 4px; gap: 4px; }
+.prop.editing input { font-size: 12px; padding: 2px 6px; }
+.prop.editing input.k { width: 9em; }
+.prop.editing input.v { width: 22em; max-width: 50vw; }
+.prop.editing button { padding: 0 6px; }
+.props .add-prop { font-size: 11px; padding: 1px 8px; color: var(--muted); }
+
+/* the manuscript's word goal */
+.ms-progress { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; font-size: 11px; color: var(--muted); }
+.ms-progress[hidden] { display: none; }
+.ms-progress .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.ms-progress .bar span { display: block; height: 100%; background: var(--accent); }
+.ms-progress .label { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.target-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.target-grid .field:last-child { grid-column: 1 / -1; }
 body:not([data-mode="block"]) #cadence { display: none; }
 .wp-cad { text-decoration-line: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-skip-ink: none; }
 .wp-cad-run { text-decoration-style: wavy; text-decoration-color: color-mix(in srgb, var(--s4) 75%, transparent); }

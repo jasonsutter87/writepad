@@ -24,8 +24,10 @@ pub struct Hit {
     pub snippet: String,
     /// How many times the words occur in the text.
     pub count: usize,
-    /// The title matched.
+    /// The title (or a page property) matched.
     pub in_title: bool,
+    /// The words appear together, as typed.
+    pub phrase: bool,
 }
 
 /// Lowercase one char to one char, so positions in the folded text are
@@ -66,9 +68,17 @@ fn snippet(text: &[char], at: usize, len: usize) -> String {
     s
 }
 
+struct Score {
+    snippet: String,
+    count: usize,
+    in_title: bool,
+    phrase: bool,
+}
+
 /// Score one document: None unless every word is in the title or text.
-fn score(words: &[Vec<char>], title: &str, text: &str) -> Option<(String, usize, bool)> {
-    let (t, x) = (fold(title), fold(text));
+/// `heading` is what counts as its title: the title, plus a page's properties.
+fn score(words: &[Vec<char>], phrase: &[char], heading: &str, text: &str) -> Option<Score> {
+    let (t, x) = (fold(heading), fold(text));
     let mut total = 0;
     let mut in_title = true;
     for w in words {
@@ -80,25 +90,28 @@ fn score(words: &[Vec<char>], title: &str, text: &str) -> Option<(String, usize,
         total += b;
     }
     let orig: Vec<char> = text.chars().collect();
-    let snip = match find(&x, &words[0], 0) {
+    let together = words.len() > 1 && (find(&t, phrase, 0).is_some() || find(&x, phrase, 0).is_some());
+    let snip = match find(&x, phrase, 0).or_else(|| find(&x, &words[0], 0)) {
         Some(i) => snippet(&orig, i, words[0].len()),
         None => snippet(&orig, 0, 0),
     };
-    Some((snip, total, in_title))
+    Some(Score { snippet: snip, count: total, in_title, phrase: together })
 }
 
 /// Notes and takes containing every word of `query`, ignoring case: title
-/// matches first, then the most matches, at most `limit`.
+/// and property matches first, then the words as typed, then the most
+/// matches, at most `limit`.
 pub fn search(vault: &Path, query: &str, limit: usize) -> Vec<Hit> {
     let words: Vec<Vec<char>> = query.split_whitespace().map(fold).collect();
     if words.is_empty() {
         return vec![];
     }
+    let phrase = fold(&query.split_whitespace().collect::<Vec<_>>().join(" "));
     let mut hits = vec![];
     for n in vault::list_notes(vault) {
         let Ok(text) = vault::read(vault, &n.path) else { continue };
         let title = n.path.trim_end_matches(".md");
-        if let Some((snippet, count, in_title)) = score(&words, title, &text) {
+        if let Some(Score { snippet, count, in_title, phrase }) = score(&words, &phrase, title, &text) {
             hits.push(Hit {
                 kind: "note",
                 path: n.path.clone(),
@@ -110,14 +123,20 @@ pub fn search(vault: &Path, query: &str, limit: usize) -> Vec<Hit> {
                 snippet,
                 count,
                 in_title,
+                phrase,
             });
         }
     }
     for info in manuscript::list(vault) {
         let Ok(m) = manuscript::load(vault, &info.id) else { continue };
         for b in &m.blocks {
+            // A page's properties are searched with its live take.
+            let props: Vec<String> = b.props.iter().map(|p| format!("{}: {}", p.key, p.value)).collect();
             for v in &b.variants {
-                if let Some((snippet, count, in_title)) = score(&words, &b.title, &v.text) {
+                let live = v.id == b.live && !props.is_empty();
+                let text = if live { format!("{}\n\n{}", props.join("\n"), v.text) } else { v.text.clone() };
+                let heading = if live { format!("{}\n{}", b.title, props.join("\n")) } else { b.title.clone() };
+                if let Some(Score { snippet, count, in_title, phrase }) = score(&words, &phrase, &heading, &text) {
                     let context = if b.variants.len() > 1 { format!("{} · {}", m.title, v.label) } else { m.title.clone() };
                     hits.push(Hit {
                         kind: "take",
@@ -130,13 +149,14 @@ pub fn search(vault: &Path, query: &str, limit: usize) -> Vec<Hit> {
                         snippet,
                         count,
                         in_title,
+                        phrase,
                     });
                 }
             }
         }
     }
     // Stable, so equal hits keep vault order (notes, then manuscript order).
-    hits.sort_by(|a, b| b.in_title.cmp(&a.in_title).then(b.count.cmp(&a.count)));
+    hits.sort_by(|a, b| b.in_title.cmp(&a.in_title).then(b.phrase.cmp(&a.phrase)).then(b.count.cmp(&a.count)));
     hits.truncate(limit);
     hits
 }
@@ -176,6 +196,15 @@ mod tests {
         assert!(h[0].in_title);
         assert!(search(v, "pigs gergesenes", 10).len() == 1);
         assert!(search(v, "   ", 10).is_empty());
+
+        // Page properties are found with the live take.
+        let m = manuscript::manifest(v, &h[0].ms).unwrap();
+        let props = vec![manuscript::Prop { key: "verses".into(), value: "Matthew 8:28-34".into() }];
+        manuscript::set_block_props(v, &m.id, &m.blocks[0].id, props).unwrap();
+        let h = search(v, "8:28", 10);
+        assert_eq!(h.len(), 1);
+        assert_eq!(h[0].take, m.blocks[0].live);
+        assert!(h[0].snippet.starts_with("verses: Matthew 8:28"), "{}", h[0].snippet);
         std::fs::remove_dir_all(&dir).unwrap();
         std::fs::remove_dir_all(&src).unwrap();
     }

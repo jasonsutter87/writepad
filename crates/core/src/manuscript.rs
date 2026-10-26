@@ -42,6 +42,42 @@ pub struct BlockMeta {
     /// Front matter: exported as-is, without a `## title` heading.
     #[serde(default)]
     pub raw: bool,
+    /// The page's own properties (verses, POV, links to notes), never exported.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub props: Vec<Prop>,
+}
+
+/// One property of a page: a name and a value, which may hold `[[links]]`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Prop {
+    pub key: String,
+    pub value: String,
+}
+
+/// The numbers the author wants to write toward. Any left out fall back to
+/// the Library blend, if there is one.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+pub struct Target {
+    /// Words per chapter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter_min: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chapter_max: Option<u32>,
+    /// Median sentence length in words.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sentence: Option<f64>,
+    /// Share of words in dialogue, 0 to 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dialogue: Option<f64>,
+    /// Words in the whole manuscript.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total: Option<u32>,
+}
+
+impl Target {
+    pub fn is_empty(&self) -> bool {
+        *self == Target::default()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -66,6 +102,8 @@ pub struct Manifest {
     /// Bumped on every structural change.
     #[serde(default)]
     pub rev: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<Target>,
 }
 
 /// A take with its text, as handed to the app.
@@ -88,6 +126,8 @@ pub struct Block {
     pub live: String,
     #[serde(default)]
     pub raw: bool,
+    #[serde(default)]
+    pub props: Vec<Prop>,
 }
 
 /// A whole manuscript with every take's text.
@@ -102,6 +142,8 @@ pub struct Manuscript {
     pub separator: bool,
     #[serde(default)]
     pub rev: u64,
+    #[serde(default)]
+    pub target: Option<Target>,
 }
 
 #[derive(Serialize)]
@@ -237,10 +279,10 @@ pub fn load(vault: &Path, id: &str) -> Result<Manuscript, String> {
                     Ok(Variant { id: v.id, label: v.label, author: v.author, created: v.created, text })
                 })
                 .collect::<Result<Vec<_>, String>>()?;
-            Ok(Block { id: b.id, title: b.title, variants, live: b.live, raw: b.raw })
+            Ok(Block { id: b.id, title: b.title, variants, live: b.live, raw: b.raw, props: b.props })
         })
         .collect::<Result<Vec<_>, String>>()?;
-    Ok(Manuscript { id: m.id, title: m.title, blocks, cuts: m.cuts, separator: m.separator, rev: m.rev })
+    Ok(Manuscript { id: m.id, title: m.title, blocks, cuts: m.cuts, separator: m.separator, rev: m.rev, target: m.target })
 }
 
 pub fn list(vault: &Path) -> Vec<ManuscriptInfo> {
@@ -443,6 +485,27 @@ pub fn set_block_title(vault: &Path, ms: &str, block: &str, title: &str) -> Resu
     })
 }
 
+/// Replace a page's properties. Rows without a name are dropped.
+pub fn set_block_props(vault: &Path, ms: &str, block: &str, props: Vec<Prop>) -> Result<(), String> {
+    let props = props
+        .into_iter()
+        .map(|p| Prop { key: p.key.trim().to_string(), value: p.value.trim().to_string() })
+        .filter(|p| !p.key.is_empty())
+        .collect();
+    update(vault, ms, |m| {
+        block_mut(m, block)?.props = props;
+        Ok(())
+    })
+}
+
+/// Set the author's own target, or clear it with an empty one.
+pub fn set_target(vault: &Path, ms: &str, target: Target) -> Result<(), String> {
+    update(vault, ms, |m| {
+        m.target = (!target.is_empty()).then_some(target);
+        Ok(())
+    })
+}
+
 /// Reorder blocks. Ids missing from `order` keep their relative order at the end,
 /// so a reorder based on a stale outline never drops a block someone just added.
 pub fn set_order(vault: &Path, ms: &str, order: &[String]) -> Result<(), String> {
@@ -462,7 +525,7 @@ pub fn add_block(vault: &Path, ms: &str, title: &str, after: Option<&str>, autho
     let take = VariantMeta { id: new_id(), label: if author.is_empty() { "draft".into() } else { author.to_string() }, author: author.to_string(), created: now() };
     write_atomic(&take_path(vault, ms, &take.id)?, text.as_bytes())?;
     update(vault, ms, |m| {
-        let b = BlockMeta { id: new_id(), title: title.to_string(), live: take.id.clone(), variants: vec![take.clone()], raw: false };
+        let b = BlockMeta { id: new_id(), title: title.to_string(), live: take.id.clone(), variants: vec![take.clone()], raw: false, props: vec![] };
         let at = after.and_then(|a| m.blocks.iter().position(|x| x.id == a)).map_or(m.blocks.len(), |i| i + 1);
         m.blocks.insert(at, b.clone());
         Ok(b)
@@ -633,9 +696,9 @@ fn create(vault: &Path, title: &str, blocks: Vec<Block>, cuts: Vec<Cut>, separat
             write_atomic(&take_path(vault, &id, &v.id)?, v.text.as_bytes())?;
             vs.push(VariantMeta { id: v.id, label: v.label, author: v.author, created: v.created });
         }
-        metas.push(BlockMeta { id: b.id, title: b.title, variants: vs, live: b.live, raw: b.raw });
+        metas.push(BlockMeta { id: b.id, title: b.title, variants: vs, live: b.live, raw: b.raw, props: b.props });
     }
-    let m = Manifest { version: 2, id: id.clone(), title: title.trim().to_string(), blocks: metas, cuts, separator, rev: 1 };
+    let m = Manifest { version: 2, id: id.clone(), title: title.trim().to_string(), blocks: metas, cuts, separator, rev: 1, target: None };
     write_manifest(vault, &m)?;
     Ok(id)
 }
@@ -660,6 +723,7 @@ pub fn import(vault: &Path, title: &str, paths: &[String]) -> Result<Manuscript,
                     variants: vec![],
                     live: String::new(),
                     raw: s.title.is_none(),
+                    props: vec![],
                 });
                 blocks.len() - 1
             });
@@ -685,7 +749,7 @@ pub fn from_sections(vault: &Path, title: &str, label: &str, sections: Vec<(Stri
         .into_iter()
         .map(|(t, text)| {
             let v = Variant { id: new_id(), label: label.into(), author: String::new(), text, created: now() };
-            Block { id: new_id(), title: t, live: v.id.clone(), variants: vec![v], raw: false }
+            Block { id: new_id(), title: t, live: v.id.clone(), variants: vec![v], raw: false, props: vec![] }
         })
         .collect::<Vec<_>>();
     if blocks.is_empty() {

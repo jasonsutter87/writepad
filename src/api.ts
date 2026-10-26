@@ -173,12 +173,27 @@ export interface Variant {
   created: number;
 }
 
+export interface Prop {
+  key: string;
+  value: string;
+}
+
 export interface Block {
   id: string;
   title: string;
   variants: Variant[];
   live: string;
   raw: boolean;
+  props: Prop[];
+}
+
+/** The author's own numbers; any left null fall back to the Library blend. */
+export interface Target {
+  chapter_min?: number | null;
+  chapter_max?: number | null;
+  sentence?: number | null;
+  dialogue?: number | null;
+  total?: number | null;
 }
 
 export interface Cut {
@@ -194,6 +209,7 @@ export interface Manuscript {
   cuts: Cut[];
   separator: boolean;
   rev: number;
+  target: Target | null;
 }
 
 export interface ManuscriptInfo {
@@ -214,6 +230,7 @@ export interface SearchHit {
   snippet: string;
   count: number;
   in_title: boolean;
+  phrase: boolean;
 }
 
 export interface NoteEntry {
@@ -276,6 +293,8 @@ export interface Cadence {
   sentence_target: number | null;
   dialogue_target: number | null;
   target_name: string | null;
+  blend: boolean;
+  manual: boolean;
   flags: CadenceFlag[];
 }
 
@@ -369,7 +388,9 @@ export const api = {
   libraryAdd: (paths: string[]) => invoke<string[]>("library_add", { paths }),
   libraryRemove: (id: string) => invoke<void>("library_remove", { id }),
   librarySetWeights: (weights: Record<string, number>) => invoke<void>("library_set_weights", { weights }),
-  cadence: (text: string) => invoke<Cadence>("cadence", { text }),
+  cadence: (text: string, manuscript: string | null = null) => invoke<Cadence>("cadence", { text, manuscript }),
+  setBlockProps: (manuscript: string, block: string, props: Prop[]) => invoke<Manuscript>("set_block_props", { manuscript, block, props }),
+  setTarget: (manuscript: string, target: Target) => invoke<Manuscript>("set_target", { manuscript, target }),
   scriptOpen: (id: string) => invoke<string>("script_open", { id }),
   getCast: (scope: string) => invoke<Record<string, string>>("get_cast", { scope }),
   setCast: (scope: string, cast: Record<string, string>) => invoke<void>("set_cast", { scope, cast }),

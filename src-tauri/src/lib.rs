@@ -158,6 +158,16 @@ fn rename_take(state: State<AppState>, manuscript: String, take: String, label: 
 }
 
 #[tauri::command]
+fn set_block_props(state: State<AppState>, manuscript: String, block: String, props: Vec<manuscript::Prop>) -> Result<Manuscript, String> {
+    changed(&state, &manuscript, |v| manuscript::set_block_props(v, &manuscript, &block, props))
+}
+
+#[tauri::command]
+fn set_target(state: State<AppState>, manuscript: String, target: manuscript::Target) -> Result<Manuscript, String> {
+    changed(&state, &manuscript, |v| manuscript::set_target(v, &manuscript, target))
+}
+
+#[tauri::command]
 fn set_block_title(state: State<AppState>, manuscript: String, block: String, title: String) -> Result<Manuscript, String> {
     changed(&state, &manuscript, |v| manuscript::set_block_title(v, &manuscript, &block, &title))
 }
@@ -489,8 +499,13 @@ async fn set_cast(app: AppHandle, scope: String, cast: std::collections::BTreeMa
 }
 
 #[tauri::command]
-async fn cadence(app: AppHandle, text: String) -> Result<profile::Cadence, String> {
-    blocking(app, move |st| Ok(profile::cadence(&text, profile::target(&st.vault()?).as_ref()))).await
+async fn cadence(app: AppHandle, text: String, manuscript: Option<String>) -> Result<profile::Cadence, String> {
+    blocking(app, move |st| {
+        let vault = st.vault()?;
+        let mine = manuscript.and_then(|id| manuscript::manifest(&vault, &id).ok()).and_then(|m| m.target);
+        Ok(profile::cadence(&text, profile::target(&vault).as_ref(), mine.as_ref()))
+    })
+    .await
 }
 
 #[tauri::command]
@@ -679,6 +694,8 @@ pub fn run() {
             set_live,
             rename_take,
             set_block_title,
+            set_block_props,
+            set_target,
             set_order,
             add_block,
             delete_block,

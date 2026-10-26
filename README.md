@@ -112,12 +112,22 @@ The app watches the vault and shows agents' takes and edits as they land.
 
 Same tools from a shell: `writepad tools`, `writepad call outline '{"manuscript":"the-last-thinker"}'`.
 
+## Page properties
+
+Under a page's title, **+ Property** adds a name and a value, such as
+`verses: Matthew 1:18–25`, `POV: June` or `see: [[Research/1920s]]`.
+`[[Links]]` open notes, other pages (`[[Page]]`) or pages of another manuscript
+(`[[Manuscript#Page]]`). Properties belong to the page, not to one take, are
+found by search, and are never exported. Names you've used before are offered
+as you type. Agents use `set_props`, and `outline` lists them.
+
 ## Search
 
 The box above the sidebar tabs (⌘⇧F) searches every note and every take of
 every manuscript, not just the live ones, so a word only one draft uses still
-turns up; each hit names its take. Every word must match, ignoring case; title
-matches come first. Clicking a hit opens that take with the match selected,
+turns up; each hit names its take. Every word must match, ignoring case.
+Matches in a title or a page's properties come first, then the words as
+typed, then the most matches. Clicking a hit opens that take with the match selected,
 and the results stay put so you can step through them. Esc or a tab clears it.
 
 ## Storage (v2)
@@ -187,6 +197,14 @@ Cline). **Compare** opens with **Against your target**: one card per measure
 biggest gaps first, recalculated as you write. Below that, every book, the
 target and your manuscript in one table, plus sentence-length and
 chapter-length charts.
+
+**Your own numbers.** **Set a target…** (or **Target…**) under a scene's
+title takes a chapter length (a range or one number), a median sentence, a
+dialogue share and a word goal for the whole manuscript. They're saved with
+the manuscript, win over the Library blend wherever both give a number, and
+need no books at all. The word goal adds a progress bar under the
+manuscript's name in the outline, counting each page's live take. Agents use
+`set_target`.
 
 Scanned EPUBs (one page per file, no paragraph breaks) are rejoined and cut at
 "Chapter 1, 2, …"; their paragraph numbers are left out rather than guessed.
@@ -336,6 +354,12 @@ the repo can be pushed for backup or sync.
 **Export** (top bar) writes the open manuscript's live cut (outline order,
 ★ live versions) or the open note:
 
+- **Word (.docx)**, **OpenDocument (.odt)** and **Rich Text (.rtf)**: a title
+  page, each chapter on a new page under a real Heading 1 (so Word's navigation
+  pane lists them), first paragraphs unindented, bold, italics, centered lines
+  and scene breaks kept. Georgia 12 pt, 1.5 spacing, US Letter with 1″ margins.
+  Nothing extra to install.
+- **Web page (.html)**: the whole book as one readable page.
 - **EPUB 3**: title page, nav, one XHTML file per chapter, italics kept.
 - **PDF**: 5.5×8.5″ book typeset by headless Chrome (needs Chrome, Chromium,
   Edge or Brave installed).
