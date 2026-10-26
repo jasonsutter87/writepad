@@ -1,7 +1,9 @@
 # Builds Windows and Linux installers for every pull request so they can be
 # tried before merging. Nothing is published: the installers are attached to
 # the workflow run (Actions → this run → Artifacts). PR builds aren't signed
-# for auto-update; only releases have the signing key.
+# for auto-update (src-tauri/tauri.pr.conf.json); only releases have the
+# signing key. The setting lives in a file because PowerShell mangles JSON on
+# the command line.
 name: PR build
 
 on:
@@ -45,7 +47,7 @@ jobs:
 
       - name: Build the installer
         working-directory: writepad
-        run: npx tauri build --bundles nsis --config '{"bundle":{"createUpdaterArtifacts":false}}'
+        run: npx tauri build --bundles nsis --config src-tauri/tauri.pr.conf.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -97,7 +99,7 @@ jobs:
 
       - name: Build the package
         working-directory: writepad
-        run: npx tauri build --bundles deb --config '{"bundle":{"createUpdaterArtifacts":false}}'
+        run: npx tauri build --bundles deb --config src-tauri/tauri.pr.conf.json
 
       - uses: actions/upload-artifact@v4
         with:
