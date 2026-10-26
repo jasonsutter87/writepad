@@ -20,6 +20,7 @@
     <header class="topbar" data-tauri-drag-region>
       <div class="brand"><b>WRITE</b>pad</div>
       <button id="btn-vault" class="ghost" title="Open a vault folder">No vault</button>
+      <span id="today-words" class="today-words" title="Words you've added today, across every page and note. Cutting words counts against it." hidden></span>
       <div class="spacer" data-tauri-drag-region></div>
       <span id="now-playing"></span>
       <div class="narration">
@@ -33,6 +34,7 @@
       </div>
       <button id="btn-export-open" class="ghost" title="Export as Word, PDF, EPUB, OpenDocument, RTF, HTML, Markdown, text or MP3">Export</button>
       <button id="btn-settings" class="ghost" title="Settings">Settings</button>
+      <button id="btn-help" class="ghost help-button" type="button" data-help="" title="Help for what you're looking at (⌘?)" aria-label="Help">?</button>
     </header>
 
     <aside class="sidebar">
@@ -116,6 +118,8 @@
           <button id="fmt-center" class="ghost" type="button" title="Center (⌘⇧E), saved as &gt; text &lt;">Center</button>
           <button id="fmt-right" class="ghost" type="button" title="Align right (⌘⇧R), saved as &gt;&gt; text">Right</button>
           <span id="fmt-script" class="hint"></span>
+          <span id="sel-words" class="hint sel-words" aria-live="polite"></span>
+          <button id="btn-focus" class="ghost" type="button" title="Focus mode: just the page (⌘⇧D). Esc comes back.">Focus</button>
           <span class="view-switch" role="group" aria-label="View">
             <button class="ghost" type="button" data-view="page" title="Page: a sheet of paper, like a word processor">Page</button>
             <button class="ghost" type="button" data-view="draft" title="Draft: just the words">Draft</button>
@@ -130,13 +134,31 @@
       <div id="empty" class="empty">
         <h1><b>WRITE</b>pad</h1>
         <p id="empty-msg">Open a vault folder to begin. Any folder of markdown works, including an Obsidian vault.</p>
-        <button id="btn-empty-vault" class="primary">Open vault…</button>
+        <button id="btn-empty-vault" class="primary" hidden>Open vault…</button>
+        <div id="welcome" class="welcome" hidden>
+          <p class="welcome-lede">Welcome. Your writing lives in a folder on this computer, and WRITEpad works in it. Where would you like to start?</p>
+          <div class="welcome-choices">
+            <button id="btn-try-demo" type="button" class="welcome-choice primary-choice">
+              <b>Try the demo</b>
+              <span>A short story, <i>The Monkey's Paw</i>, set up to show every feature. A good first stop.</span>
+            </button>
+            <button id="btn-new-book" type="button" class="welcome-choice">
+              <b>Start a new book</b>
+              <span>Makes a <code>WRITEpad</code> folder in your Documents and opens a blank manuscript.</span>
+            </button>
+            <button id="btn-open-folder" type="button" class="welcome-choice">
+              <b>Open a folder…</b>
+              <span>Any folder of markdown, including an Obsidian vault or drafts you already have.</span>
+            </button>
+          </div>
+          <p class="hint"><button type="button" class="link-button" data-help="your-first-vault">How vaults work</button></p>
+        </div>
       </div>
     </main>
 
     <aside class="inspector">
       <section class="for-doc">
-        <h3>Onion skin</h3>
+        <h3>Onion skin <button type="button" class="help-link" data-help="onion-skin" title="Help: onion skin" aria-label="Help: onion skin">?</button></h3>
         <label class="field">Compare with <select id="sel-compare"></select></label>
         <label class="field">Ghost <input id="rng-ghost" type="range" min="0" max="100" /></label>
         <div id="diff-stats" class="hint"></div>
@@ -144,22 +166,27 @@
         <p class="hint">Plays the compared version, then this one.</p>
       </section>
       <section id="cast-section" class="for-doc" hidden>
-        <h3>Cast</h3>
+        <h3>Cast <button type="button" class="help-link" data-help="listen" title="Help: table reads" aria-label="Help: table reads">?</button></h3>
         <p class="hint">Who reads which part in a table read (▶ Listen). The narrator reads headings and action.</p>
         <div id="cast"></div>
         <button id="btn-recast" class="wide" type="button">Recast everyone</button>
       </section>
       <section class="block-only">
-        <h3>In this scene</h3>
+        <h3>Comments <button type="button" class="help-link" data-help="comments" title="Help: comments" aria-label="Help: comments">?</button></h3>
+        <div id="comments"></div>
+        <button id="btn-comment" class="wide" type="button" title="Comment on the selected words (⌘⌥M)">+ Comment on selection</button>
+      </section>
+      <section class="block-only">
+        <h3>In this scene <button type="button" class="help-link" data-help="your-story-world" title="Help: your story world" aria-label="Help: your story world">?</button></h3>
         <div id="scene-cast"></div>
         <button id="btn-event-here" class="wide" type="button">+ Event here</button>
       </section>
       <section id="connections-section" hidden>
-        <h3>Connections</h3>
+        <h3>Connections <button type="button" class="help-link" data-help="your-story-world" title="Help: your story world" aria-label="Help: your story world">?</button></h3>
         <div id="connections"></div>
       </section>
       <section class="for-ms">
-        <h3>Cuts</h3>
+        <h3>Cuts <button type="button" class="help-link" data-help="cuts" title="Help: cuts" aria-label="Help: cuts">?</button></h3>
         <ul id="list-cuts" class="list"></ul>
         <div class="row">
           <input id="cut-name" placeholder="Name this cut" />
@@ -167,7 +194,7 @@
         </div>
       </section>
       <section class="for-doc">
-        <h3>History</h3>
+        <h3>History <button type="button" class="help-link" data-help="history" title="Help: history" aria-label="Help: history">?</button></h3>
         <div id="history-off" hidden>
           <p class="hint">Keep every version of this vault: compare any past version, restore it, or roll everything back. Uses git, so it works with any git tool.</p>
           <button id="btn-history-on" class="wide">Turn on history</button>
@@ -182,7 +209,7 @@
         </div>
       </section>
       <section>
-        <h3>Pronunciations</h3>
+        <h3>Pronunciations <button type="button" class="help-link" data-help="listen" title="Help: pronunciations" aria-label="Help: pronunciations">?</button></h3>
         <ul id="lexicon" class="list lexicon"></ul>
         <div class="row">
           <input id="lex-word" placeholder="Werbos" />
@@ -193,6 +220,7 @@
       </section>
     </aside>
 
+    <button id="btn-unfocus" class="unfocus" type="button" title="Leave focus mode (Esc)">Leave focus</button>
     <div id="toast"></div>
 
     <div id="update-card" role="status" hidden>
@@ -391,6 +419,23 @@
       </form>
     </dialog>
 
+    <dialog id="dlg-python">
+      <form method="dialog">
+        <h2>Narration needs Python</h2>
+        <p>The voices that read your work aloud run on your own computer, using Python 3.10 or newer. WRITEpad couldn't find it here.</p>
+        <ol class="python-steps">
+          <li>Click <b>Get Python</b> and download the installer for your computer from python.org.</li>
+          <li>Run it. <span class="win-only">On Windows, tick <b>Add python.exe to PATH</b> on the first screen.</span><span class="mac-only">On a Mac, the defaults are fine.</span></li>
+          <li>Come back and click <b>Try again</b>. WRITEpad sets up the voices itself (about 350 MB).</li>
+        </ol>
+        <p class="hint">Everything else in WRITEpad works without it.</p>
+        <div class="actions">
+          <button value="cancel">Not now</button>
+          <button id="btn-get-python" type="button">Get Python</button>
+          <button id="btn-python-retry" value="retry" class="primary">Try again</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="dlg-whats-new">
       <form method="dialog">
         <h2 id="whats-new-title">What's new</h2>

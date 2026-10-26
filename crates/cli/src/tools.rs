@@ -6,7 +6,7 @@
 
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
-use writepad_core::{diff, export, history, manuscript as ms, profile, script, search, suggest, vault, world};
+use writepad_core::{comments, diff, export, history, manuscript as ms, profile, script, search, suggest, vault, world};
 
 pub struct Ctx {
     pub vault: PathBuf,
@@ -241,6 +241,32 @@ pub fn all() -> Vec<Tool> {
                 ms::set_live(&ctx.vault, s(a, "manuscript")?, s(a, "take")?)?;
                 Ok(json!({ "ok": true }))
             },
+        },
+        Tool {
+            name: "comment",
+            description: "Leave a comment on a page's text for the author: a note in the margin, never a change to the text. Give the exact words it's about (quote, as they appear in the take) and what you want to say. Use this for editorial notes instead of rewriting.",
+            schema: || {
+                obj(
+                    json!({
+                        "manuscript": str_prop(MS), "block": str_prop("Block id or title (its live take)."), "take": str_prop("…or a take id."),
+                        "quote": str_prop("The exact words to comment on, copied from the text."), "text": str_prop("Your comment."), "agent": str_prop(AGENT),
+                    }),
+                    &["manuscript", "quote", "text"],
+                )
+            },
+            run: |ctx, a| {
+                let id = s(a, "manuscript")?;
+                let m = ms::manifest(&ctx.vault, id)?;
+                let (_, take) = resolve_take(&m, opt(a, "block"), opt(a, "take"))?;
+                let c = comments::add(&ctx.vault, id, &take, s(a, "quote")?, s(a, "text")?, agent(ctx, a))?;
+                Ok(json!({ "comment": c.id, "take": take }))
+            },
+        },
+        Tool {
+            name: "comments",
+            description: "Read the comments on a manuscript (the author's and agents'), with the words each is on. Resolved ones are marked.",
+            schema: || obj(json!({ "manuscript": str_prop(MS) }), &["manuscript"]),
+            run: |ctx, a| Ok(json!(comments::list(&ctx.vault, s(a, "manuscript")?)?)),
         },
         Tool {
             name: "leave_out",

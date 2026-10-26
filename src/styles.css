@@ -684,3 +684,108 @@ body[data-view="code"] #editor .cm-activeLine { background: rgba(127, 127, 127, 
 body[data-view="code"] #editor .cm-activeLineGutter { background: rgba(127, 127, 127, 0.12); color: var(--ink); }
 #btn-add-block { margin-top: 8px; color: var(--muted); border-style: dashed; }
 #btn-add-block:hover { color: var(--ink); }
+
+/* Help: the top bar's ? and the small ? beside each panel heading */
+.help-button { width: 30px; padding: 4px 0; font-weight: 600; }
+.help-link {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: 1px;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.help-link:hover, .help-link:focus-visible { opacity: 1; color: var(--accent); border-color: var(--accent); }
+
+/* Today's words, in the top bar */
+.today-words { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Words in the selection, in the formatting bar */
+.sel-words { margin-left: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Focus mode: only the page. The menu shortcut, Esc or the pill bring the rest back. */
+body.focus { grid-template-columns: 0 minmax(0, 1fr) 0; grid-template-rows: 0 minmax(0, 1fr); }
+body.focus .topbar, body.focus .sidebar, body.focus .inspector, body.focus .doc-head { display: none; }
+body.focus #editor .cm-scroller { padding-top: 12vh; }
+/* Just your words: no onion skin or cadence marks while focusing. */
+body.focus #editor .wp-ghost { display: none; }
+body.focus #editor .wp-ins { background: none; border-bottom: 0; }
+body.focus #editor .wp-cad { text-decoration: none; }
+.unfocus { display: none; }
+body.focus .unfocus {
+  display: block;
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+body.focus .unfocus:hover, body.focus .unfocus:focus-visible { opacity: 1; }
+
+/* Find and replace (⌘F), drawn to match the app */
+#editor .cm-panels { background: var(--panel); color: var(--ink); border-color: var(--line); font: 13px/1.4 var(--ui); }
+#editor .cm-panels.cm-panels-top { border-bottom: 1px solid var(--line); }
+#editor .cm-search { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; }
+#editor .cm-search br { display: none; }
+#editor .cm-search input[name="replace"] { margin-left: 12px; }
+#editor .cm-search .cm-textfield { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font: inherit; min-width: 180px; }
+#editor .cm-search .cm-button { background: var(--paper); background-image: none; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font: inherit; }
+#editor .cm-search .cm-button:hover { border-color: var(--muted); }
+#editor .cm-search label { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-size: 12px; }
+#editor .cm-search button[name="close"] { position: static; margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; }
+#editor .cm-searchMatch { background: color-mix(in srgb, var(--accent) 25%, transparent); outline: none; }
+#editor .cm-searchMatch-selected { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* First run: three ways in */
+.welcome { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 760px; }
+.welcome-lede { max-width: 520px !important; font-size: 15px; line-height: 1.5; margin: 4px 0 6px; }
+.welcome-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.welcome-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 16px 18px;
+  text-align: left;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--muted);
+  line-height: 1.45;
+  user-select: none;
+}
+.welcome-choice b { color: var(--ink); font-size: 15px; }
+.welcome-choice:hover { border-color: var(--accent); }
+.welcome-choice.primary-choice { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.welcome-choice code { font-size: 12px; }
+.link-button { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
+@media (max-width: 900px) { .welcome-choices { grid-template-columns: 1fr; } }
+
+.python-steps { padding-left: 20px; line-height: 1.5; }
+.python-steps li { margin-bottom: 6px; }
+
+/* Comments: highlighted words in the text, notes in the panel */
+#editor .wp-comment { background: color-mix(in srgb, #e9b949 28%, transparent); border-bottom: 2px solid color-mix(in srgb, #e9b949 80%, transparent); cursor: pointer; }
+#editor .wp-comment.active { background: color-mix(in srgb, #e9b949 50%, transparent); }
+body.focus #editor .wp-comment { background: none; border-bottom: 0; }
+#comments { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.comment { padding: 8px 10px; border: 1px solid var(--line); border-left: 3px solid #e9b949; border-radius: 8px; background: var(--paper); transition: box-shadow 0.3s; }
+.comment.flash { box-shadow: 0 0 0 2px var(--accent); }
+.comment.resolved { border-left-color: var(--line); opacity: 0.75; }
+.comment.detached { border-left-style: dashed; }
+.comment-quote { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; color: var(--muted); font: italic 12px/1.4 var(--prose); cursor: pointer; }
+.comment-text { margin: 6px 0 4px; white-space: pre-wrap; cursor: text; user-select: text; }
+.comment textarea { width: 100%; margin-top: 6px; resize: vertical; font: inherit; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+.comment-meta { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.comment-meta .spacer { flex: 1; }
+.comment-meta button { font-size: 11px; padding: 1px 6px; }
+.comments-done summary { cursor: pointer; color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+.comments-done .comment { margin-bottom: 6px; }

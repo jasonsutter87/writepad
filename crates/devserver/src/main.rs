@@ -17,7 +17,7 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use writepad_core::{diff, history, manuscript, narrate, profile, script, search, suggest, vault, world};
+use writepad_core::{comments, diff, history, manuscript, narrate, profile, script, search, suggest, vault, world};
 
 const ADDR: &str = "127.0.0.1:1421";
 const HOSTS: [&str; 2] = ["127.0.0.1:1421", "localhost:1421"];
@@ -62,12 +62,16 @@ fn main() {
             "__reset" => Err("Not resetting a vault given on the command line.".into()),
             "get_settings" => Ok(settings.clone()),
             "save_settings" => {
-                // The preview stays on its vault whatever the page asks for.
+                // The preview stays on its vault whatever the page asks for,
+                // except "no vault", so the welcome screen can be tried.
                 let mut s = args["settings"].clone();
-                s["vault"] = json!(vault);
+                if !s["vault"].is_null() {
+                    s["vault"] = json!(vault);
+                }
                 settings = s;
                 Ok(Value::Null)
             }
+            "open_demo" | "new_book_folder" => Ok(json!(vault)),
             _ => call(&vault, &cmd, &args),
         };
         let _ = match result {
@@ -154,6 +158,8 @@ fn call(v: &Path, cmd: &str, a: &Value) -> Result<Value, String> {
         "read_note" => ok(vault::read(v, &s("path")?)),
         "write_note" => ok(vault::write(v, &s("path")?, &s("text")?)),
         "create_note" => ok(vault::create(v, &s("name")?)),
+        "list_comments" => ok(comments::list(v, &s("manuscript")?)),
+        "set_comments" => ok(comments::set_for_take(v, &s("manuscript")?, &s("take")?, arg(a, "comments")?)),
         "list_manuscripts" => ok(Ok(manuscript::list(v))),
         "load_manuscript" => ok(manuscript::load(v, &s("id")?)),
         "write_take" => ok(manuscript::write_take(v, &s("manuscript")?, &s("take")?, &s("text")?)),

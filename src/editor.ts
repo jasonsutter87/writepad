@@ -3,6 +3,7 @@
 import { minimalSetup } from "codemirror";
 import { redo, undo } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
+import { search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorSelection, EditorState, Prec, StateEffect, StateField, type Extension, type Range } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, WidgetType, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import type { DiffOp } from "./api";
@@ -51,6 +52,35 @@ const onionField = StateField.define<DecorationSet>({
   update(deco, tr) {
     deco = deco.map(tr.changes);
     for (const e of tr.effects) if (e.is(setOnion)) deco = onionDecorations(e.value, tr.state.doc.length);
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+/** A comment's place in the text; `active` is the one open in the panel. */
+export interface CommentRange {
+  id: string;
+  from: number;
+  to: number;
+  active?: boolean;
+}
+
+const setComments = StateEffect.define<CommentRange[]>();
+
+/** Commented words, highlighted. The marks move with the text as it's edited. */
+const commentField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const e of tr.effects) {
+      if (!e.is(setComments)) continue;
+      const len = tr.state.doc.length;
+      const marks = e.value
+        .filter((c) => c.from >= 0 && c.from < c.to && c.to <= len)
+        .sort((a, b) => a.from - b.from)
+        .map((c) => Decoration.mark({ class: c.active ? "wp-comment active" : "wp-comment", attributes: { "data-comment": c.id } }).range(c.from, c.to));
+      deco = Decoration.set(marks, true);
+    }
     return deco;
   },
   provide: (f) => EditorView.decorations.from(f),
@@ -247,6 +277,10 @@ export interface EditorHooks {
   onStop: () => boolean;
   /** Cmd/Ctrl-click on a [[wikilink]]. */
   onLink: (target: string) => void;
+  /** The selected text changed ("" when nothing is selected). */
+  onSelect?: (text: string) => void;
+  /** A click on commented words. */
+  onComment?: (id: string) => void;
 }
 
 /** The `[[target]]` (alias stripped) under `pos`, if any. */
@@ -278,12 +312,31 @@ export class Editor {
       EditorView.lineWrapping,
       placeholder("Start writing…"),
       onionField,
+      commentField,
       speakingField,
       cadenceField,
       frontmatterPlugin,
       screenplayField,
       screenplayClass,
       layoutPlugin,
+      // The system spell checker underlines misspellings as you type.
+      EditorView.contentAttributes.of({ spellcheck: "true", autocorrect: "off", autocapitalize: "sentences" }),
+      // Find and replace in this page: ⌘F opens it, ⌘G / ⇧⌘G step through matches.
+      search({ top: true }),
+      EditorState.phrases.of({
+        Find: "Find",
+        Replace: "Replace",
+        next: "Next",
+        previous: "Previous",
+        all: "All",
+        "match case": "Match case",
+        regexp: "Regex",
+        "by word": "Whole words",
+        replace: "Replace",
+        "replace all": "Replace all",
+        close: "Close",
+      }),
+      keymap.of(searchKeymap),
       // Ours beat the defaults (Enter, and Mod-i, which selects the parent syntax node there).
       Prec.high(keymap.of([
         { key: "Mod-b", run: (v) => toggleWrap(v, "**") },
@@ -299,8 +352,17 @@ export class Editor {
       ])),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) hooks.onChange(u.state.doc.toString());
+        if (u.selectionSet || u.docChanged) {
+          const sel = u.state.selection.main;
+          hooks.onSelect?.(sel.empty ? "" : u.state.sliceDoc(sel.from, sel.to));
+        }
       }),
       EditorView.domEventHandlers({
+        click: (e) => {
+          const id = (e.target as HTMLElement).closest<HTMLElement>("[data-comment]")?.dataset.comment;
+          if (id && hooks.onComment) hooks.onComment(id);
+          return false;
+        },
         mousedown: (e, view) => {
           if (!(e.metaKey || e.ctrlKey)) return false;
           const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
@@ -345,6 +407,33 @@ export class Editor {
   /** Swap in a whole new document, with its own fresh undo history. */
   load(text: string) {
     this.view.setState(EditorState.create({ doc: text, extensions: this.all() }));
+  }
+
+  /** Highlight these comments' words (replacing any shown before). */
+  setComments(ranges: CommentRange[]) {
+    this.view.dispatch({ effects: setComments.of(ranges) });
+  }
+
+  /** Where each highlighted comment's words are now, after edits. */
+  commentRanges(): Map<string, { from: number; to: number }> {
+    const out = new Map<string, { from: number; to: number }>();
+    this.view.state.field(commentField).between(0, this.view.state.doc.length, (from, to, d) => {
+      const id = d.spec.attributes?.["data-comment"];
+      if (id) out.set(id, { from, to });
+    });
+    return out;
+  }
+
+  /** The selection, if any text is selected. */
+  selection(): { from: number; to: number; text: string } | null {
+    const s = this.view.state.selection.main;
+    return s.empty ? null : { from: s.from, to: s.to, text: this.view.state.sliceDoc(s.from, s.to) };
+  }
+
+  /** Select a range and bring it into view. */
+  select(from: number, to: number) {
+    this.view.dispatch({ selection: { anchor: from, head: to }, scrollIntoView: true });
+    this.view.focus();
   }
 
   setOnion(ops: DiffOp[] | null) {

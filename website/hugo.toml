@@ -1,4 +1,6 @@
-baseURL = 'https://writepad.app/'
+# writepad.app belongs to someone else; this is WRITEpad's address until it has its own domain
+# (also SITE in src-tauri/src/lib.rs and src/devbridge.ts).
+baseURL = 'https://writepad-app.netlify.app/'
 languageCode = 'en-us'
 title = 'WRITEpad'
 disableKinds = ['taxonomy', 'term']
@@ -24,4 +26,4 @@ docGroups = ['Getting started', 'Write and revise', 'Your story world', 'Listen 
 baseURL = 'http://localhost:1313/'
 
 [environments.production]
-baseURL = 'https://writepad.app/'
+baseURL = 'https://writepad-app.netlify.app/'

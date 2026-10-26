@@ -92,6 +92,30 @@ Those are the default locations; put them anywhere and set the paths in
 Settings. Dictation downloads its Whisper model on first use. Hold-to-talk is
 Right Alt. PDF export uses Edge, which every Windows install has.
 
+## Writing basics
+
+- **First run** offers *Try the demo* (the demo vault ships inside the app and
+  is copied to `Documents/WRITEpad Demo`), *Start a new book*
+  (`Documents/WRITEpad`) or *Open a folder…*.
+- **Spell check** is the system's, underlining as you type. **⌘F** finds and
+  replaces in the page; **⌘⇧F** searches the vault.
+- **Comments**: select words, **⌘⌥M** (or *+ Comment on selection*). Stored
+  in `.writepad/manuscripts/<id>/comments.json`, per take, never in the text
+  or the export; they follow their words as you edit. Resolve or delete them
+  in the panel. Agents leave them with the `comment` tool.
+- **Focus mode** (⌘⇧D, View → Focus mode) shows only the page. **Esc** leaves.
+- **Words today** (top bar) counts net words written today, per computer.
+  Selecting text shows its word count in the formatting bar.
+- **Narration setup** without Python 3.10+ explains what to install, links
+  to python.org and retries.
+
+## Help
+
+**?** in the top bar, **Help → WRITEpad Help** (⌘?) and the small **?** by
+each panel heading open the matching page of the docs at
+https://writepad-app.netlify.app/docs/ (the site is `website/`). The address
+is `SITE` in `src-tauri/src/lib.rs`; `open_help` only opens pages there.
+
 ## Browser preview (docs and screenshots)
 
 The UI can run in a normal browser against a sandbox copy of `demo/`, so
@@ -117,7 +141,9 @@ can work on one manuscript at once. Register it with Claude Code:
 It uses the vault open in the app unless given `--vault DIR` (or
 `WRITEPAD_VAULT`). Tools: `list_manuscripts`, `outline`, `read`, `fork`, `edit`,
 `write`, `compare`, `set_live`, `add_block`, `search`, `list_notes`, `read_note`,
-`write_note`, `append_note`, `snapshot`, `history`, `export`, `import`.
+`write_note`, `append_note`, `snapshot`, `history`, `export`, `import`,
+`comment` and `comments` (editorial notes on the text, never edits to it),
+`leave_out`.
 
 Rules the tools enforce: an agent writes only takes it created (`force` to
 override when asked), every take carries its agent's name (🤖 in the app),
