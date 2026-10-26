@@ -6,7 +6,7 @@
 
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
-use writepad_core::{diff, export, history, manuscript as ms, profile, script, suggest, vault, world};
+use writepad_core::{diff, export, history, manuscript as ms, profile, script, search, suggest, vault, world};
 
 pub struct Ctx {
     pub vault: PathBuf,
@@ -305,9 +305,15 @@ pub fn all() -> Vec<Tool> {
         },
         Tool {
             name: "timeline",
-            description: "The story's events in chronological order (a linked list: each event follows the one before it). lane 0 is the main line; higher lanes are branches. Each event lists the manuscript scenes it happens in, so story order vs. chapter order (flashbacks) is visible.",
-            schema: || obj(json!({}), &[]),
-            run: |ctx, _| Ok(json!(world::timeline(&ctx.vault))),
+            description: "The story's events in chronological order (a linked list: each event follows the one before it), one timeline after another: \"\" is the main one, others are named by `timeline`. lane 0 is a timeline's main line; higher lanes are branches. Each event lists the scenes it happens in; `told_at` is where the telling tells it first and `told_earlier` marks flashbacks. Give `manuscript` (and a `cut` of it) to read against that telling: events it doesn't tell get told_at null.",
+            schema: || obj(json!({ "manuscript": str_prop("Read against this manuscript (id or title)."), "cut": str_prop("…or this saved cut of it, e.g. one character's telling.") }), &[]),
+            run: |ctx, a| {
+                let against = opt(a, "manuscript").map(|m| (m, opt(a, "cut")));
+                if against.is_none() && opt(a, "cut").is_some() {
+                    return Err("`cut` needs `manuscript`.".into());
+                }
+                Ok(json!(world::timeline_read(&ctx.vault, against)?))
+            },
         },
         Tool {
             name: "profile",
@@ -481,13 +487,14 @@ pub fn all() -> Vec<Tool> {
         },
         Tool {
             name: "timeline_add",
-            description: "Add a draft event to the timeline after `after` (an event name; omit for the very start). Give `before` to splice it in between two events. `scenes` are \"Manuscript title#Block title\" refs where it happens.",
+            description: "Add a draft event to the timeline after `after` (an event name; omit for the very start). Give `before` to splice it in between two events. `scenes` are \"Manuscript title#Block title\" refs where it happens. `timeline` names the timeline it starts (with no `after`) or branches off into (with `after`): a parallel world, another era, a story within the story. Events that follow it inherit it.",
             schema: || {
                 obj(
                     json!({
                         "name": str_prop("Short event name, e.g. \"The van doesn't brake\"."),
                         "after": str_prop("Event it follows."), "before": str_prop("Event it comes just before (splice)."),
                         "when": str_prop("In-story time, free text, e.g. \"Fri Apr 26 2041, 8:14am\"."),
+                        "timeline": str_prop("Timeline name, e.g. \"1999\" or \"The mirror world\". Omit to stay on the timeline of `after`."),
                         "scenes": { "type": "array", "items": { "type": "string" } },
                         "body": str_prop("What happens, with [[links]] to who and where."),
                         "agent": str_prop(AGENT),
@@ -506,6 +513,9 @@ pub fn all() -> Vec<Tool> {
                 if let Some(w) = opt(a, "when") {
                     props.push(("when".into(), serde_json::to_string(w).unwrap()));
                 }
+                if let Some(t) = opt(a, "timeline") {
+                    props.push(("timeline".into(), serde_json::to_string(t).unwrap()));
+                }
                 if let Some(sc) = a["scenes"].as_array().filter(|x| !x.is_empty()) {
                     let links: Vec<String> = sc.iter().filter_map(|x| x.as_str()).map(|x| format!("[[{}]]", x.trim_start_matches("[[").trim_end_matches("]]"))).collect();
                     props.push(("scenes".into(), serde_json::to_string(&links).unwrap()));
@@ -519,6 +529,12 @@ pub fn all() -> Vec<Tool> {
             description: "List the vault's markdown notes (paths relative to the vault).",
             schema: || obj(json!({}), &[]),
             run: |ctx, _| Ok(json!(vault::list_notes(&ctx.vault).into_iter().map(|n| n.path).collect::<Vec<_>>())),
+        },
+        Tool {
+            name: "search",
+            description: "Search every note and every take of every manuscript (not just live takes) for text containing all the given words, ignoring case. Title matches come first.",
+            schema: || obj(json!({ "query": str_prop("words to find"), "limit": { "type": "integer", "description": "most hits to return (default 50)" } }), &["query"]),
+            run: |ctx, a| Ok(json!(search::search(&ctx.vault, s(a, "query")?, a.get("limit").and_then(Value::as_u64).unwrap_or(50) as usize))),
         },
         Tool {
             name: "read_note",

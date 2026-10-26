@@ -36,6 +36,9 @@
     </header>
 
     <aside class="sidebar">
+      <div class="search-box">
+        <input id="search" type="search" placeholder="Search notes and every take…" spellcheck="false" autocomplete="off" title="Search the vault (⌘⇧F)" />
+      </div>
       <nav class="tabs">
         <button data-tab="manuscripts" class="active">Manuscripts</button>
         <button data-tab="notes">Notes</button>
@@ -83,6 +86,10 @@
         <p class="hint">Weight books to blend them into your target. Only the numbers are kept, never the text.</p>
         <div class="world-group-head scripts-head"><span class="count">Scripts</span><button id="btn-script-add" class="ghost" type="button" title="Add a screenplay">+</button></div>
         <ul id="library-scripts" class="list"></ul>
+      </section>
+      <section id="pane-search" class="pane" hidden>
+        <p id="search-count" class="hint"></p>
+        <ul id="list-search" class="list search-results"></ul>
       </section>
       <section id="pane-notes" class="pane" hidden>
         <button id="btn-new-note" class="wide">New note</button>
@@ -288,6 +295,7 @@
             <option value="world">World overview</option>
           </select>
         </label>
+        <label class="field" id="world-timeline-field" hidden>Timeline <span class="hint">(a parallel world, another era, a story within the story)</span> <input id="world-timeline" placeholder="1999" /></label>
         <label class="field">Name <input id="world-name" placeholder="June" /></label>
         <label class="field" id="world-when-field">When <span class="hint">(in-story time, optional)</span> <input id="world-when" placeholder="Fri Apr 26 2041, 8:14am" /></label>
         <div class="actions">

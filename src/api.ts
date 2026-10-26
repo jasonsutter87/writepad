@@ -117,10 +117,25 @@ export interface TimelineEvent {
   summary: string;
   status: string | null;
   after: string | null;
+  /** "" for the main timeline, else its name. */
+  timeline: string;
   lane: number;
   /** [manuscript id, block id, label, position in manuscript] */
   scenes: [string, string, string, number][];
   people: string[];
+  /** Where the telling read against tells it first; null if it doesn't. */
+  told_at: number | null;
+  /** Out of order: told before events that happen earlier. */
+  told_earlier: boolean;
+  /** Out of order: told after events that happen later (a flashback). */
+  told_later: boolean;
+}
+
+/** A manuscript and its cuts: what the timeline can be read against. */
+export interface Telling {
+  id: string;
+  title: string;
+  cuts: string[];
 }
 
 export interface SceneInfo {
@@ -186,6 +201,19 @@ export interface ManuscriptInfo {
   title: string;
   blocks: number;
   variants: number;
+}
+
+export interface SearchHit {
+  kind: "note" | "take";
+  path: string;
+  ms: string;
+  block: string;
+  take: string;
+  title: string;
+  context: string;
+  snippet: string;
+  count: number;
+  in_title: boolean;
 }
 
 export interface NoteEntry {
@@ -290,6 +318,7 @@ export const api = {
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
 
   listNotes: () => invoke<NoteEntry[]>("list_notes"),
+  search: (query: string) => invoke<SearchHit[]>("search_vault", { query }),
   readNote: (path: string) => invoke<string>("read_note", { path }),
   writeNote: (path: string, text: string) => invoke<void>("write_note", { path, text }),
   createNote: (name: string) => invoke<string>("create_note", { name }),
@@ -331,7 +360,8 @@ export const api = {
   historyRestoreAll: (id: string) => invoke<void>("history_restore_all", { id }),
 
   worldGraph: () => invoke<WorldGraph>("world_graph"),
-  worldTimeline: () => invoke<TimelineEvent[]>("world_timeline"),
+  worldTimeline: (manuscript: string | null = null, cut: string | null = null) => invoke<TimelineEvent[]>("world_timeline", { manuscript, cut }),
+  worldTellings: () => invoke<Telling[]>("world_tellings"),
   worldEntities: () => invoke<Entity[]>("world_entities"),
   worldEntity: (path: string) => invoke<EntityInfo | null>("world_entity", { path }),
   worldScene: (manuscript: string, block: string) => invoke<SceneInfo>("world_scene", { manuscript, block }),
@@ -352,8 +382,8 @@ export const api = {
   worldSuggestApply: (manuscript: string, picks: WorldSuggestion[], timeline: boolean) =>
     invoke<string[]>("world_suggest_apply", { manuscript, picks, timeline }),
   worldImportCsv: (path: string) => invoke<{ created: string[]; skipped: string[] }>("world_import_csv", { path }),
-  worldInsertEvent: (name: string, after: string | null, before: string | null, when: string | null, scene: [string, string] | null) =>
-    invoke<string>("world_insert_event", { name, after, before, when, scene }),
+  worldInsertEvent: (name: string, after: string | null, before: string | null, when: string | null, scene: [string, string] | null, timeline: string | null = null) =>
+    invoke<string>("world_insert_event", { name, after, before, when, scene, timeline }),
   worldMoveEvent: (path: string, after: string | null, before: string | null) => invoke<void>("world_move_event", { path, after, before }),
   worldDeleteEvent: (path: string) => invoke<string>("world_delete_event", { path }),
   createManuscript: (title: string, screenplay: boolean) => invoke<string>("create_manuscript", { title, screenplay }),

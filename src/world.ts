@@ -2,7 +2,7 @@
 // linked list of events, with branches). Both are plain DOM/SVG; main.ts
 // owns the data and passes handlers in.
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type SimulationNodeDatum } from "d3-force";
-import type { GraphEdge, GraphNode, TimelineEvent, WorldGraph } from "./api";
+import type { GraphEdge, GraphNode, Telling, TimelineEvent, WorldGraph } from "./api";
 
 /** Each kind: legend label, folder plural, and a shape. Color is `--k-<kind>` in CSS. */
 export const KINDS: { kind: string; label: string; plural: string; shape: Shape }[] = [
@@ -335,17 +335,82 @@ export interface TimelineHandlers {
   open: (path: string) => void;
   openScene: (ms: string, block: string) => void;
   insert: (after: string | null, before: string | null) => void;
+  /** A new first event for the timeline `before` starts; with neither, a new timeline. */
+  start: (before: string | null, timeline: string | null) => void;
   move: (path: string, after: string | null, before: string | null) => void;
   remove: (path: string) => void;
+}
+
+/** What the timeline is read against, and how it's shown. */
+export interface TimelineView {
+  tellings: Telling[];
+  /** "" (each scene where it is), a manuscript id, or `${id}\n${cut}`. */
+  against: string;
+  mode: "list" | "chart";
+  setAgainst: (v: string) => void;
+  setMode: (m: "list" | "chart") => void;
 }
 
 /** The event right after `e` on the same line, if it directly follows `e`. */
 function nextInLane(events: TimelineEvent[], i: number): TimelineEvent | null {
   const e = events[i];
-  return events.slice(i + 1).find((x) => x.after === e.path && x.lane === e.lane) ?? null;
+  return events.slice(i + 1).find((x) => x.after === e.path && x.lane === e.lane && x.timeline === e.timeline) ?? null;
 }
 
-export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: TimelineHandlers, confirmButton: (label: string, fn: () => void) => HTMLElement) {
+const timelineName = (t: string) => t || "Main timeline";
+
+function timelineControls(events: TimelineEvent[], v: TimelineView, h: TimelineHandlers): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "timeline-controls";
+  if (v.tellings.length) {
+    const label = document.createElement("label");
+    label.className = "against";
+    label.append(document.createTextNode("Read against "));
+    const sel = document.createElement("select");
+    const opt = (value: string, text: string) => {
+      const o = document.createElement("option");
+      o.value = value;
+      o.textContent = text;
+      o.selected = value === v.against;
+      return o;
+    };
+    sel.append(opt("", "each scene where it is"));
+    for (const t of v.tellings) {
+      const g = document.createElement("optgroup");
+      g.label = t.title;
+      g.append(opt(t.id, `${t.title}, as it is now`), ...t.cuts.map((c) => opt(`${t.id}\n${c}`, `cut: ${c}`)));
+      sel.append(g);
+    }
+    sel.onchange = () => v.setAgainst(sel.value);
+    label.append(sel);
+    row.append(label);
+  }
+  const seg = document.createElement("div");
+  seg.className = "seg";
+  seg.setAttribute("role", "group");
+  for (const [m, text] of [["list", "List"], ["chart", "Story vs telling"]] as const) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = text;
+    b.setAttribute("aria-pressed", String(v.mode === m));
+    b.onclick = () => v.setMode(m);
+    seg.append(b);
+  }
+  row.append(seg);
+  const start = document.createElement("button");
+  start.type = "button";
+  start.textContent = "+ Event at the start";
+  start.onclick = () => h.insert(null, events.find((e) => !e.after && e.lane === 0 && e.timeline === "")?.path ?? null);
+  const fresh = document.createElement("button");
+  fresh.type = "button";
+  fresh.textContent = "+ New timeline";
+  fresh.title = "A parallel world, another era, a story within the story";
+  fresh.onclick = () => h.start(null, null);
+  row.append(start, fresh);
+  return row;
+}
+
+export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: TimelineHandlers, confirmButton: (label: string, fn: () => void) => HTMLElement, v: TimelineView) {
   root.replaceChildren();
   const head = document.createElement("div");
   head.className = "timeline-head";
@@ -353,12 +418,8 @@ export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: Ti
   title.textContent = "Timeline";
   const hint = document.createElement("p");
   hint.className = "hint";
-  hint.textContent = "Events in the order they happen. Drag one onto another to move it after that event. The § chips show where each is told, so flashbacks stand out.";
-  const start = document.createElement("button");
-  start.type = "button";
-  start.textContent = "+ Event at the start";
-  start.onclick = () => h.insert(null, events.find((e) => !e.after && e.lane === 0)?.path ?? null);
-  head.append(title, hint, start);
+  hint.textContent = "Events in the order they happen. Drag one onto another to move it after that event. The § chips show where each is told, so flashbacks stand out; read against a cut to see one telling's order.";
+  head.append(title, hint, timelineControls(events, v, h));
   root.append(head);
 
   if (!events.length) {
@@ -368,13 +429,32 @@ export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: Ti
     root.append(p);
     return;
   }
+  if (v.mode === "chart") return renderTelling(root, events, h, v);
 
+  const byPath = new Map(events.map((e) => [e.path, e]));
+  const named = events.some((e) => e.timeline !== "");
   const list = document.createElement("ol");
   list.className = "timeline";
-  let prevPos: number | null = null;
   events.forEach((e, i) => {
+    if (named && (i === 0 || events[i - 1].timeline !== e.timeline)) {
+      const sec = document.createElement("li");
+      sec.className = "timeline-name";
+      const n = document.createElement("h3");
+      n.textContent = timelineName(e.timeline);
+      const count = document.createElement("span");
+      count.className = "hint";
+      const size = events.filter((x) => x.timeline === e.timeline).length;
+      count.textContent = `${size} event${size === 1 ? "" : "s"}`;
+      const add = document.createElement("button");
+      add.type = "button";
+      add.textContent = "+ at the start";
+      add.onclick = () => h.start(e.path, e.timeline);
+      sec.append(n, count, add);
+      list.append(sec);
+    }
+    const untold = v.against !== "" && e.told_at === null;
     const li = document.createElement("li");
-    li.className = `event lane-${Math.min(e.lane, 4)}${e.status === "draft" ? " draft" : ""}`;
+    li.className = `event lane-${Math.min(e.lane, 4)}${e.status === "draft" ? " draft" : ""}${untold ? " untold" : ""}`;
     li.style.setProperty("--lane", String(e.lane));
     li.draggable = true;
 
@@ -394,10 +474,11 @@ export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: Ti
       when.textContent = e.when;
       top.append(when);
     }
-    if (e.lane > 0 && e.after && events.find((x) => x.path === e.after)?.lane !== e.lane) {
+    const parent = e.after ? byPath.get(e.after) : undefined;
+    if (parent && (parent.timeline !== e.timeline || (e.lane > 0 && parent.lane !== e.lane))) {
       const br = document.createElement("span");
       br.className = "badge";
-      br.textContent = `branches from ${events.find((x) => x.path === e.after)?.name ?? "?"}`;
+      br.textContent = parent.timeline !== e.timeline ? `branches from ${parent.name} (${timelineName(parent.timeline)})` : `branches from ${parent.name}`;
       top.append(br);
     }
     if (e.status === "draft") {
@@ -421,7 +502,6 @@ export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: Ti
     }
     const chips = document.createElement("div");
     chips.className = "event-chips";
-    const firstPos = e.scenes.length ? Math.min(...e.scenes.map((s) => s[3])) : null;
     for (const [ms, block, label] of e.scenes) {
       const c = document.createElement("button");
       c.type = "button";
@@ -431,11 +511,20 @@ export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: Ti
       c.onclick = () => h.openScene(ms, block);
       chips.append(c);
     }
-    if (firstPos !== null && prevPos !== null && firstPos < prevPos && e.lane === 0) {
+    if (e.told_earlier || e.told_later) {
+      const f = document.createElement("span");
+      f.className = `badge ${e.told_earlier ? "early" : "late"}`;
+      f.title = e.told_earlier
+        ? "Told out of order: before events that happen ahead of it."
+        : "Told out of order: after events that happen later. A flashback.";
+      f.textContent = e.told_earlier ? "told earlier" : "told later";
+      chips.append(f);
+    }
+    if (untold) {
       const f = document.createElement("span");
       f.className = "badge";
-      f.title = "This happens later than the event above, but the book tells it earlier.";
-      f.textContent = "told earlier";
+      f.title = "The telling you're reading against doesn't tell this event.";
+      f.textContent = "not in this telling";
       chips.append(f);
     }
     for (const p of e.people) {
@@ -477,7 +566,81 @@ export function renderTimeline(root: HTMLElement, events: TimelineEvent[], h: Ti
       if (moving && moving !== e.path) h.move(moving, e.path, nextInLane(events, i)?.path ?? null);
     };
     list.append(li);
-    if (e.lane === 0 && firstPos !== null) prevPos = Math.max(prevPos ?? firstPos, firstPos);
   });
   root.append(list);
+}
+
+/**
+ * Story vs telling: events in the order they happen (left) joined to the
+ * order they're told (right). Lines that run together are told in order;
+ * the ones that cut across the rest are told out of order.
+ */
+/** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 22nd. */
+function ordinal(n: number): string {
+  const teen = n % 100 >= 11 && n % 100 <= 13;
+  return `${n}${teen ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
+function renderTelling(root: HTMLElement, events: TimelineEvent[], h: TimelineHandlers, v: TimelineView) {
+  const told = events.filter((e) => e.told_at !== null);
+  const untold = events.length - told.length;
+  const note = document.createElement("p");
+  note.className = "hint telling-note";
+  const early = told.filter((e) => e.told_earlier).length;
+  const late = told.filter((e) => e.told_later).length;
+  const out = [early && `${early} told earlier`, late && `${late} told later (flashbacks)`].filter(Boolean).join(", ");
+  note.textContent =
+    `Left: when it happens. Right: when it's told. ${out ? `Out of order, in color: ${out}.` : "Everything is told in the order it happens."}` +
+    (untold ? ` ${untold} event${untold === 1 ? " isn't" : "s aren't"} told here${v.against ? " in this telling" : " in any scene"}.` : "");
+  root.append(note);
+  if (!told.length) return;
+
+  const rowH = 22;
+  const top = 26;
+  const width = Math.max(560, Math.min(root.clientWidth - 80, 1100));
+  const labelW = Math.min(300, Math.floor(width * 0.36));
+  const x1 = labelW + 10;
+  const x2 = width - labelW - 10;
+  const height = top + told.length * rowH + 8;
+  const telling = told.map((e, i) => ({ e, i })).sort((a, b) => a.e.told_at! - b.e.told_at! || a.i - b.i);
+  const right = new Map(telling.map((t, j) => [t.e.path, j]));
+
+  const chart = svgEl("svg", { class: "telling", width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Story order against telling order" });
+  const header = (x: number, anchor: string, text: string) => {
+    const t = svgEl("text", { x, y: 14, "text-anchor": anchor, class: "telling-head" });
+    t.textContent = text;
+    chart.append(t);
+  };
+  header(x1, "end", "Story order");
+  header(x2, "start", "Telling order");
+  const y = (row: number) => top + row * rowH + rowH / 2;
+  const fit = (text: string) => (text.length > 40 ? `${text.slice(0, 39)}…` : text);
+
+  told.forEach((e, i) => {
+    const j = right.get(e.path)!;
+    const g = svgEl("g", { class: `telling-row${e.told_earlier ? " early" : ""}${e.told_later ? " late" : ""}${e.lane > 0 ? " branch" : ""}`, tabindex: 0 });
+    const tip = svgEl("title", {});
+    tip.textContent = `${e.name}${e.timeline ? ` (${e.timeline})` : ""}: happens ${ordinal(i + 1)}, told ${ordinal(j + 1)}`;
+    const mid = (x1 + x2) / 2;
+    g.append(
+      tip,
+      svgEl("path", { d: `M ${x1 + 6} ${y(i)} C ${mid} ${y(i)}, ${mid} ${y(j)}, ${x2 - 6} ${y(j)}`, class: "telling-line" }),
+      svgEl("circle", { cx: x1 + 3, cy: y(i), r: 3, class: "telling-dot" }),
+      svgEl("circle", { cx: x2 - 3, cy: y(j), r: 3, class: "telling-dot" }),
+    );
+    const left = svgEl("text", { x: x1 - 4, y: y(i) + 4, "text-anchor": "end", class: "telling-label" });
+    left.textContent = fit(e.name);
+    const rightLabel = svgEl("text", { x: x2 + 4, y: y(j) + 4, "text-anchor": "start", class: "telling-label" });
+    rightLabel.textContent = fit(e.name);
+    g.append(left, rightLabel);
+    g.addEventListener("click", () => h.open(e.path));
+    g.addEventListener("keydown", (ev) => {
+      if ((ev as KeyboardEvent).key === "Enter") h.open(e.path);
+    });
+    chart.append(g);
+  });
+  const wrap = document.createElement("div");
+  wrap.className = "telling-wrap";
+  wrap.append(chart);
+  root.append(wrap);
 }

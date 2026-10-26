@@ -331,6 +331,13 @@ export class Editor {
     this.view.focus();
   }
 
+  /** Select the first place `word` occurs, ignoring case, and scroll to it. */
+  find(word: string) {
+    const at = word ? this.view.state.doc.toString().toLowerCase().indexOf(word.toLowerCase()) : -1;
+    if (at < 0) return;
+    this.view.dispatch({ selection: { anchor: at, head: at + word.length }, scrollIntoView: true });
+  }
+
   get text(): string {
     return this.view.state.doc.toString();
   }

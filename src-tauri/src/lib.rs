@@ -6,7 +6,7 @@ mod watch;
 use dictate::{Dictation, Mic, Whisper};
 use manuscript::{Manuscript, ManuscriptInfo};
 use narrate::{Lexicon, Worker};
-use writepad_core::{diff, export, history, manuscript, narrate, profile, script, suggest, vault, world};
+use writepad_core::{diff, export, history, manuscript, narrate, profile, script, search, suggest, vault, world};
 use settings::Settings;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -86,6 +86,11 @@ fn restart_watcher(app: &AppHandle, state: &AppState) {
 #[tauri::command]
 fn list_notes(state: State<AppState>) -> Result<Vec<vault::NoteEntry>, String> {
     Ok(vault::list_notes(&state.vault()?))
+}
+
+#[tauri::command]
+fn search_vault(state: State<AppState>, query: String) -> Result<Vec<search::Hit>, String> {
+    Ok(search::search(&state.vault()?, &query, 200))
 }
 
 #[tauri::command]
@@ -369,9 +374,31 @@ async fn world_graph(app: AppHandle) -> Result<world::Graph, String> {
     blocking(app, |st| Ok(world::graph(&st.vault()?))).await
 }
 
+/// The timeline, with "told earlier" measured against a manuscript (or one
+/// of its cuts) when given.
 #[tauri::command]
-async fn world_timeline(app: AppHandle) -> Result<Vec<world::TimelineEvent>, String> {
-    blocking(app, |st| Ok(world::timeline(&st.vault()?))).await
+async fn world_timeline(app: AppHandle, manuscript: Option<String>, cut: Option<String>) -> Result<Vec<world::TimelineEvent>, String> {
+    blocking(app, move |st| world::timeline_read(&st.vault()?, manuscript.as_deref().map(|m| (m, cut.as_deref())))).await
+}
+
+#[derive(serde::Serialize)]
+struct Telling {
+    id: String,
+    title: String,
+    cuts: Vec<String>,
+}
+
+/// Tellings the timeline can be read against: each manuscript and its cuts.
+#[tauri::command]
+async fn world_tellings(app: AppHandle) -> Result<Vec<Telling>, String> {
+    blocking(app, |st| {
+        let v = st.vault()?;
+        Ok(manuscript::list(&v)
+            .into_iter()
+            .map(|m| Telling { cuts: manuscript::manifest(&v, &m.id).map(|x| x.cuts.into_iter().map(|c| c.name).collect()).unwrap_or_default(), id: m.id, title: m.title })
+            .collect())
+    })
+    .await
 }
 
 #[tauri::command]
@@ -507,9 +534,13 @@ fn world_insert_event(
     before: Option<String>,
     when: Option<String>,
     scene: Option<(String, String)>,
+    timeline: Option<String>,
 ) -> Result<String, String> {
     let vault = state.vault()?;
     let mut props = vec![];
+    if let Some(t) = timeline.filter(|t| !t.trim().is_empty()) {
+        props.push(("timeline".to_string(), serde_json::to_string(t.trim()).unwrap()));
+    }
     if let Some(w) = when.filter(|w| !w.trim().is_empty()) {
         props.push(("when".to_string(), serde_json::to_string(w.trim()).unwrap()));
     }
@@ -635,6 +666,7 @@ pub fn run() {
             get_settings,
             save_settings,
             list_notes,
+            search_vault,
             read_note,
             write_note,
             create_note,
@@ -672,6 +704,7 @@ pub fn run() {
             export_audio_chapter,
             world_graph,
             world_timeline,
+            world_tellings,
             world_entities,
             world_entity,
             world_scene,
