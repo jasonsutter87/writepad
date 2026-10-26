@@ -127,7 +127,14 @@ The box above the sidebar tabs (⌘⇧F) searches every note and every take of
 every manuscript, not just the live ones, so a word only one draft uses still
 turns up; each hit names its take. Every word must match, ignoring case.
 Matches in a title or a page's properties come first, then the words as
-typed, then the most matches. Clicking a hit opens that take with the match selected,
+typed, then the most matches. Hyphens and dashes count as the same.
+
+A search that reads as a reference (`Matthew 1:1-2`, `john 3:16`, `Luke 15`)
+also finds every page whose properties cite an overlapping range, and puts
+them first: `verses: Matthew 1:1–17; Luke 3:23–38` answers `Matthew 1:5`
+and `Luke 3`. Properties can list several books, ranges across chapters
+(`1:18–2:3`) and follow-ons that keep the book (`Mark 1:1-8, 2:3`); book
+names match from three letters (`matt`). Clicking a hit opens that take with the match selected,
 and the results stay put so you can step through them. Esc or a tab clears it.
 
 ## Storage (v2)

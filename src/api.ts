@@ -231,6 +231,7 @@ export interface SearchHit {
   count: number;
   in_title: boolean;
   phrase: boolean;
+  reference: boolean;
 }
 
 export interface NoteEntry {

@@ -2026,7 +2026,8 @@ function showSearch(on: boolean) {
 
 /** The snippet with each query word marked. */
 function marked(text: string, words: string[]): Node[] {
-  const esc = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  // Any dash matches any dash, as in search itself.
+  const esc = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[-–—]/g, "[-–—]"));
   const parts = text.split(new RegExp(`(${esc.join("|")})`, "gi"));
   return parts.map((p, i) => (i % 2 ? el("mark", { textContent: p }) : document.createTextNode(p)));
 }
