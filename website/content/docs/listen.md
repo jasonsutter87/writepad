@@ -22,6 +22,8 @@ Lines in *italics* (a character's thoughts, say) are read in a second voice, whi
 
 The voices need a one-time setup on each computer. When WRITEpad asks, click **Set up narration**, or find it in **Settings**. It installs the voices (about 350 MB) and needs Python 3.10 or newer.
 
+If your computer doesn't have Python yet, WRITEpad says so and walks you through it: **Get Python** opens python.org's download page, and after you've installed it, **Try again** carries on with the setup. On Windows, tick **Add python.exe to PATH** in the Python installer.
+
 ## Table reads for screenplays and dialogue
 
 In a [screenplay](/docs/screenplays/), **▶ Listen** gives each character a voice, like a table read. The **Cast** panel on the right lists who reads which part; the narrator reads headings and action. Change any voice there, or click **Recast everyone** for a fresh mix.

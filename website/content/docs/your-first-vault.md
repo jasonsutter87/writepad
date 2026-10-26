@@ -9,14 +9,18 @@ WRITEpad keeps everything in a **vault**: an ordinary folder on your computer. N
 
 Shortcuts on these pages say <kbd>⌘</kbd>. On Windows, use <kbd>Ctrl</kbd>.
 
-## Open a vault
+## The first time
 
-The first time you open WRITEpad, click **Open vault…** and choose a folder. Any folder of markdown works, including an existing Obsidian vault, or an empty folder for a new project.
+The first time you open WRITEpad, it offers three ways in:
+
+- **Try the demo**: a short story, *The Monkey's Paw*, set up to show every feature. WRITEpad puts a copy in `Documents/WRITEpad Demo` and opens its **Start here** note. Change anything you like; it's your copy.
+- **Start a new book**: makes a `WRITEpad` folder in your Documents and opens a blank manuscript.
+- **Open a folder…**: any folder of markdown, including an existing Obsidian vault or drafts you already have.
 
 To switch to another vault later, open **Settings** (top right) and click **Change…** next to **Vault**. The vault's name shows at the top left of the window.
 
 {{< tip >}}
-**Try the demo first.** The [download page](/download/) has a demo vault built around *The Monkey's Paw* by W. W. Jacobs. Unzip it, open it as your vault, and start with the note **Start here**. Every feature in these pages can be tried on it.
+**Try the demo first.** Every feature in these pages can be tried on it. (It's also on the [download page](/download/) as a zip.)
 {{< /tip >}}
 
 ## The four tabs
