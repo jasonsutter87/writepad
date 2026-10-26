@@ -45,6 +45,10 @@ pub struct BlockMeta {
     /// The page's own properties (verses, POV, links to notes), never exported.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub props: Vec<Prop>,
+    /// Left out of the current cut: kept in the outline, but not exported
+    /// (as text or audio) or counted.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub out: bool,
 }
 
 /// One property of a page: a name and a value, which may hold `[[links]]`.
@@ -128,6 +132,8 @@ pub struct Block {
     pub raw: bool,
     #[serde(default)]
     pub props: Vec<Prop>,
+    #[serde(default)]
+    pub out: bool,
 }
 
 /// A whole manuscript with every take's text.
@@ -279,7 +285,7 @@ pub fn load(vault: &Path, id: &str) -> Result<Manuscript, String> {
                     Ok(Variant { id: v.id, label: v.label, author: v.author, created: v.created, text })
                 })
                 .collect::<Result<Vec<_>, String>>()?;
-            Ok(Block { id: b.id, title: b.title, variants, live: b.live, raw: b.raw, props: b.props })
+            Ok(Block { id: b.id, title: b.title, variants, live: b.live, raw: b.raw, props: b.props, out: b.out })
         })
         .collect::<Result<Vec<_>, String>>()?;
     Ok(Manuscript { id: m.id, title: m.title, blocks, cuts: m.cuts, separator: m.separator, rev: m.rev, target: m.target })
@@ -517,17 +523,25 @@ pub fn set_order(vault: &Path, ms: &str, order: &[String]) -> Result<(), String>
             }
         }
         m.blocks.extend(rest);
+        settle(m);
         Ok(())
     })
+}
+
+/// Pages left out of the cut sit after the rest, whatever order was asked for.
+fn settle(m: &mut Manifest) {
+    let (kept, out): (Vec<_>, Vec<_>) = std::mem::take(&mut m.blocks).into_iter().partition(|b| !b.out);
+    m.blocks = kept.into_iter().chain(out).collect();
 }
 
 pub fn add_block(vault: &Path, ms: &str, title: &str, after: Option<&str>, author: &str, text: &str) -> Result<BlockMeta, String> {
     let take = VariantMeta { id: new_id(), label: if author.is_empty() { "draft".into() } else { author.to_string() }, author: author.to_string(), created: now() };
     write_atomic(&take_path(vault, ms, &take.id)?, text.as_bytes())?;
     update(vault, ms, |m| {
-        let b = BlockMeta { id: new_id(), title: title.to_string(), live: take.id.clone(), variants: vec![take.clone()], raw: false, props: vec![] };
+        let b = BlockMeta { id: new_id(), title: title.to_string(), live: take.id.clone(), variants: vec![take.clone()], raw: false, props: vec![], out: false };
         let at = after.and_then(|a| m.blocks.iter().position(|x| x.id == a)).map_or(m.blocks.len(), |i| i + 1);
         m.blocks.insert(at, b.clone());
+        settle(m);
         Ok(b)
     })
 }
@@ -551,12 +565,14 @@ pub fn delete_block(vault: &Path, ms: &str, block: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Save the pages in the current cut, their order and live takes, by name.
 pub fn save_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     update(vault, ms, |m| {
+        let kept = || m.blocks.iter().filter(|b| !b.out);
         let cut = Cut {
             name: name.to_string(),
-            order: m.blocks.iter().map(|b| b.id.clone()).collect(),
-            picks: m.blocks.iter().map(|b| (b.id.clone(), b.live.clone())).collect(),
+            order: kept().map(|b| b.id.clone()).collect(),
+            picks: kept().map(|b| (b.id.clone(), b.live.clone())).collect(),
         };
         m.cuts.retain(|c| c.name != name);
         m.cuts.push(cut);
@@ -564,6 +580,8 @@ pub fn save_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     })
 }
 
+/// Make a saved cut the current one: its pages in its order with its live
+/// takes. Pages it doesn't list move to the end and are left out.
 pub fn apply_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     update(vault, ms, |m| {
         let cut = m.cuts.iter().find(|c| c.name == name).cloned().ok_or("No such cut")?;
@@ -573,8 +591,10 @@ pub fn apply_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
                 m.blocks.push(rest.remove(i));
             }
         }
+        let kept = m.blocks.len();
         m.blocks.extend(rest);
-        for b in &mut m.blocks {
+        for (i, b) in m.blocks.iter_mut().enumerate() {
+            b.out = i >= kept;
             if let Some(pick) = cut.picks.get(&b.id) {
                 if b.variants.iter().any(|v| &v.id == pick) {
                     b.live = pick.clone();
@@ -588,6 +608,34 @@ pub fn apply_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
 pub fn delete_cut(vault: &Path, ms: &str, name: &str) -> Result<(), String> {
     update(vault, ms, |m| {
         m.cuts.retain(|c| c.name != name);
+        Ok(())
+    })
+}
+
+/// Put a deleted cut back where it was in the list (undo).
+pub fn restore_cut(vault: &Path, ms: &str, cut: Cut, at: usize) -> Result<(), String> {
+    update(vault, ms, |m| {
+        if m.cuts.iter().any(|c| c.name == cut.name) {
+            return Err(format!("There's already a cut named “{}”.", cut.name));
+        }
+        m.cuts.insert(at.min(m.cuts.len()), cut);
+        Ok(())
+    })
+}
+
+/// Leave a page out of the current cut, or put it back. Pages left out sit
+/// after the rest: one left out moves to the end, one put back follows the
+/// last page still in.
+pub fn set_block_out(vault: &Path, ms: &str, block: &str, out: bool) -> Result<(), String> {
+    update(vault, ms, |m| {
+        let i = m.blocks.iter().position(|b| b.id == block).ok_or_else(|| format!("No block {block:?}"))?;
+        if m.blocks[i].out == out {
+            return Ok(());
+        }
+        let mut b = m.blocks.remove(i);
+        b.out = out;
+        let at = if out { m.blocks.len() } else { m.blocks.iter().rposition(|b| !b.out).map_or(0, |j| j + 1) };
+        m.blocks.insert(at, b);
         Ok(())
     })
 }
@@ -696,7 +744,7 @@ fn create(vault: &Path, title: &str, blocks: Vec<Block>, cuts: Vec<Cut>, separat
             write_atomic(&take_path(vault, &id, &v.id)?, v.text.as_bytes())?;
             vs.push(VariantMeta { id: v.id, label: v.label, author: v.author, created: v.created });
         }
-        metas.push(BlockMeta { id: b.id, title: b.title, variants: vs, live: b.live, raw: b.raw, props: b.props });
+        metas.push(BlockMeta { id: b.id, title: b.title, variants: vs, live: b.live, raw: b.raw, props: b.props, out: b.out });
     }
     let m = Manifest { version: 2, id: id.clone(), title: title.trim().to_string(), blocks: metas, cuts, separator, rev: 1, target: None };
     write_manifest(vault, &m)?;
@@ -724,6 +772,7 @@ pub fn import(vault: &Path, title: &str, paths: &[String]) -> Result<Manuscript,
                     live: String::new(),
                     raw: s.title.is_none(),
                     props: vec![],
+                    out: false,
                 });
                 blocks.len() - 1
             });
@@ -749,7 +798,7 @@ pub fn from_sections(vault: &Path, title: &str, label: &str, sections: Vec<(Stri
         .into_iter()
         .map(|(t, text)| {
             let v = Variant { id: new_id(), label: label.into(), author: String::new(), text, created: now() };
-            Block { id: new_id(), title: t, live: v.id.clone(), variants: vec![v], raw: false, props: vec![] }
+            Block { id: new_id(), title: t, live: v.id.clone(), variants: vec![v], raw: false, props: vec![], out: false }
         })
         .collect::<Vec<_>>();
     if blocks.is_empty() {
@@ -790,11 +839,12 @@ fn migrate_v1(vault: &Path, id: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// The current cut as (title, text) chapters: outline order, live takes.
-/// Front matter blocks come back with no title.
+/// The current cut as (title, text) chapters: outline order, live takes,
+/// without pages left out. Front matter blocks come back with no title.
 pub fn cut_chapters(m: &Manuscript) -> Vec<(Option<String>, String)> {
     m.blocks
         .iter()
+        .filter(|b| !b.out)
         .map(|b| {
             let text = b.variants.iter().find(|v| v.id == b.live).or(b.variants.last()).map(|v| v.text.clone()).unwrap_or_default();
             ((!b.raw).then(|| b.title.clone()), text)
@@ -811,6 +861,43 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn a_cut_leaves_out_the_pages_it_doesnt_list() {
+        let vault = temp_vault("cut-out");
+        let pages = ["One", "Two", "Three"].map(|t| (t.to_string(), format!("{t}.")));
+        let id = from_sections(&vault, "Book", "draft_1", pages.to_vec()).unwrap();
+        save_cut(&vault, &id, "All").unwrap();
+        let two = load(&vault, &id).unwrap().blocks[1].id.clone();
+        set_block_out(&vault, &id, &two, true).unwrap();
+        save_cut(&vault, &id, "Short").unwrap();
+        let m = load(&vault, &id).unwrap();
+        assert_eq!(m.cuts[1].order.len(), 2);
+        // A new page after one that's left out is still in, so it goes before the line.
+        let added = add_block(&vault, &id, "Four", Some(&two), "", "Four.").unwrap();
+        let titles: Vec<_> = load(&vault, &id).unwrap().blocks.iter().map(|b| b.title.clone()).collect();
+        assert_eq!(titles, ["One", "Three", "Four", "Two"]);
+        delete_block(&vault, &id, &added.id).unwrap();
+        assert_eq!(cut_chapters(&m).len(), 2);
+
+        let order: Vec<_> = load(&vault, &id).unwrap().blocks.iter().map(|b| b.title.clone()).collect();
+        assert_eq!(order, ["One", "Three", "Two"]);
+        set_block_out(&vault, &id, &two, false).unwrap();
+        assert!(load(&vault, &id).unwrap().blocks.iter().all(|b| !b.out));
+        apply_cut(&vault, &id, "Short").unwrap();
+        let m = load(&vault, &id).unwrap();
+        let titles: Vec<_> = m.blocks.iter().map(|b| (b.title.as_str(), b.out)).collect();
+        assert_eq!(titles, [("One", false), ("Three", false), ("Two", true)]);
+        assert_eq!(cut_chapters(&m).iter().map(|c| c.1.as_str()).collect::<Vec<_>>(), ["One.", "Three."]);
+
+        apply_cut(&vault, &id, "All").unwrap();
+        assert!(load(&vault, &id).unwrap().blocks.iter().all(|b| !b.out));
+
+        let all = load(&vault, &id).unwrap().cuts[0].clone();
+        delete_cut(&vault, &id, "All").unwrap();
+        restore_cut(&vault, &id, all, 0).unwrap();
+        assert_eq!(load(&vault, &id).unwrap().cuts[0].name, "All");
     }
 
     #[test]

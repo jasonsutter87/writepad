@@ -101,6 +101,7 @@ pub fn all() -> Vec<Tool> {
                             "block": b.id,
                             "title": b.title,
                             "props": b.props,
+                            "out": b.out,
                             "live": b.live,
                             "takes": b.variants.iter().map(|v| json!({
                                 "take": v.id, "label": v.label, "author": v.author, "words": words(&v.text),
@@ -238,6 +239,23 @@ pub fn all() -> Vec<Tool> {
             schema: || obj(json!({ "manuscript": str_prop(MS), "take": str_prop("Take id.") }), &["manuscript", "take"]),
             run: |ctx, a| {
                 ms::set_live(&ctx.vault, s(a, "manuscript")?, s(a, "take")?)?;
+                Ok(json!({ "ok": true }))
+            },
+        },
+        Tool {
+            name: "leave_out",
+            description: "Leave a page (block) out of the current cut, or put it back with out=false. A page left out stays in the outline but isn't exported (as text or audio) or counted. Only do this when the author asked.",
+            schema: || {
+                obj(
+                    json!({ "manuscript": str_prop(MS), "block": str_prop("Block id or title."), "out": { "type": "boolean", "description": "true to leave out (default), false to put back." } }),
+                    &["manuscript", "block"],
+                )
+            },
+            run: |ctx, a| {
+                let id = s(a, "manuscript")?;
+                let m = ms::manifest(&ctx.vault, id)?;
+                let (block, _) = resolve_take(&m, opt(a, "block"), None)?;
+                ms::set_block_out(&ctx.vault, id, &block, a.get("out").and_then(Value::as_bool).unwrap_or(true))?;
                 Ok(json!({ "ok": true }))
             },
         },

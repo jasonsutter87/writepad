@@ -185,6 +185,8 @@ export interface Block {
   live: string;
   raw: boolean;
   props: Prop[];
+  /** Left out of the current cut: not exported (as text or audio) or counted. */
+  out: boolean;
 }
 
 /** The author's own numbers; any left null fall back to the Library blend. */
@@ -357,6 +359,8 @@ export const api = {
   addBlock: (manuscript: string, title: string, after: string | null) => invoke<Manuscript>("add_block", { manuscript, title, after }),
   deleteBlock: (manuscript: string, block: string) => invoke<Manuscript>("delete_block", { manuscript, block }),
   cutOp: (manuscript: string, op: "save" | "apply" | "delete", name: string) => invoke<Manuscript>("cut_op", { manuscript, op, name }),
+  restoreCut: (manuscript: string, cut: Cut, at: number) => invoke<Manuscript>("restore_cut", { manuscript, cut, at }),
+  setBlockOut: (manuscript: string, block: string, out: boolean) => invoke<Manuscript>("set_block_out", { manuscript, block, out }),
   importDrafts: (title: string, paths: string[]) => invoke<Manuscript>("import_drafts", { title, paths }),
 
   diffWords: (old: string, next: string) => invoke<DiffOp[]>("diff_words", { old, new: next }),

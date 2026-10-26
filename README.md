@@ -92,6 +92,20 @@ Those are the default locations; put them anywhere and set the paths in
 Settings. Dictation downloads its Whisper model on first use. Hold-to-talk is
 Right Alt. PDF export uses Edge, which every Windows install has.
 
+## Browser preview (docs and screenshots)
+
+The UI can run in a normal browser against a sandbox copy of `demo/`, so
+tools like auto-documentor (or Playwright) can click through it:
+
+    cargo run -p writepad-devserver   # the app's commands on 127.0.0.1:1421
+    npm run dev                       # http://localhost:1420
+
+`crates/devserver` serves the same core calls as the desktop app over HTTP,
+on a fresh copy of the demo in `target/docs-vault` (`POST /api/__reset`
+copies it again). `src/devbridge.ts` routes the page's calls there when
+there's no Tauri; the production build drops it. Narration, dictation and
+file dialogs need the desktop app.
+
 ## Headless: agents
 
 `writepad mcp` is an MCP server over stdio. Each agent session runs its own
@@ -158,8 +172,13 @@ Older single-file manuscripts migrate on first open (kept as `<id>.json.v1`).
   one to try something; *Make live* puts it in the current cut.
 - **Onion skin**: pick a version to compare with. Words you added are tinted;
   words the other version had are drawn as ghosts. The Ghost slider fades them.
-- **Cuts**: drag blocks in the outline to reorder. Save the order plus the
-  live versions as a named cut; *Export live cut* writes `<id>.cut.md`.
+- **Cuts**: a cut is a named recipe: which pages are in, their order, and
+  each one's ★ live version. Drag pages in the outline to reorder; press
+  **−** on a page (or drag it below the line) to leave it out, **+** to put
+  it back. Pages left out stay in the outline, struck through, but aren't
+  exported (as text or audio) or counted. **Save** names the current cut;
+  clicking a cut applies it: its pages in its order, everything else left
+  out. Deleting a cut never touches pages, and **Undo** brings it back.
 
 ## Dictation (murmur-core)
 
@@ -358,8 +377,8 @@ the repo can be pushed for backup or sync.
 
 ## Export
 
-**Export** (top bar) writes the open manuscript's live cut (outline order,
-★ live versions) or the open note:
+**Export** (top bar) writes the open manuscript's current cut (outline
+order, ★ live versions, pages left out skipped) or the open note:
 
 - **Word (.docx)**, **OpenDocument (.odt)** and **Rich Text (.rtf)**: a title
   page, each chapter on a new page under a real Heading 1 (so Word's navigation

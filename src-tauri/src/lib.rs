@@ -163,6 +163,16 @@ fn set_block_props(state: State<AppState>, manuscript: String, block: String, pr
 }
 
 #[tauri::command]
+fn set_block_out(state: State<AppState>, manuscript: String, block: String, out: bool) -> Result<Manuscript, String> {
+    changed(&state, &manuscript, |v| manuscript::set_block_out(v, &manuscript, &block, out))
+}
+
+#[tauri::command]
+fn restore_cut(state: State<AppState>, manuscript: String, cut: manuscript::Cut, at: usize) -> Result<Manuscript, String> {
+    changed(&state, &manuscript, |v| manuscript::restore_cut(v, &manuscript, cut, at))
+}
+
+#[tauri::command]
 fn set_target(state: State<AppState>, manuscript: String, target: manuscript::Target) -> Result<Manuscript, String> {
     changed(&state, &manuscript, |v| manuscript::set_target(v, &manuscript, target))
 }
@@ -700,6 +710,8 @@ pub fn run() {
             add_block,
             delete_block,
             cut_op,
+            restore_cut,
+            set_block_out,
             import_drafts,
             diff_words,
             voices,

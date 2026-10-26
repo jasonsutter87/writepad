@@ -1,7 +1,8 @@
+import "./devbridge";
 import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
+import { api, type AudioSegment, type Block, type Book, type Cadence, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
 import { applyTheme, contrast, PRESETS } from "./theme";
 import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
@@ -72,6 +73,18 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLEl
   Object.assign(node, props);
   node.append(...kids);
   return node;
+}
+
+/** A clickable row (list item, property) that the keyboard can reach and open with Enter or Space. */
+function clickable(node: HTMLElement, run: () => unknown) {
+  node.onclick = run;
+  node.tabIndex = 0;
+  node.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target === node) {
+      e.preventDefault();
+      node.click();
+    }
+  });
 }
 
 /** A button that needs a second click within 3s, instead of a confirm dialog. */
@@ -524,11 +537,31 @@ function renderOutline() {
   const list = $("outline");
   list.replaceChildren();
   if (!ms) return;
+  const left = ms.blocks.filter((b) => b.out).length;
   for (const block of ms.blocks) {
+    if (block.out && block === ms.blocks.find((b) => b.out)) {
+      list.append(
+        el("li", {
+          className: "outline-divider",
+          textContent: `Left out of this cut · ${left}`,
+          title: "Not exported (as text or audio) or counted. Drag a page above this line, or press + on it, to put it back.",
+        }),
+      );
+    }
     const live = block.variants.find((v) => v.id === block.live);
+    const toggle = el("button", {
+      type: "button",
+      className: "ghost out-toggle",
+      textContent: block.out ? "+" : "−",
+      title: block.out ? "Put back in this cut" : "Leave out of this cut",
+    });
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      if (ms) op(api.setBlockOut(ms.id, block.id, !block.out));
+    };
     const li = el(
       "li",
-      { draggable: true, className: doc?.kind === "block" && doc.blockId === block.id ? "active" : "" },
+      { draggable: true, className: [doc?.kind === "block" && doc.blockId === block.id ? "active" : "", block.out ? "out" : ""].join(" ").trim() },
       el("span", { className: "grip", textContent: "⋮⋮" }),
       el("span", { className: "name", textContent: block.title }),
       el("span", {
@@ -536,9 +569,10 @@ function renderOutline() {
         textContent: block.variants.length > 1 ? `${block.variants.length} · ${live?.label ?? ""}` : "",
         title: "versions · live version",
       }),
+      toggle,
     );
     li.dataset.id = block.id;
-    li.onclick = () => openBlock(block.id);
+    clickable(li, () => openBlock(block.id));
     li.ondragstart = (e) => {
       e.dataTransfer!.setData("text/plain", block.id);
       li.classList.add("dragging");
@@ -579,8 +613,12 @@ async function addChapter() {
   loadManuscripts().catch(() => {});
 }
 
-function moveBlock(id: string, targetId: string, after: boolean) {
+/** Drop a page next to another; dropped among the pages left out, it's left out too, and back among the rest, it's put back. */
+async function moveBlock(id: string, targetId: string, after: boolean) {
   if (!ms || id === targetId) return;
+  const [moved, target] = [id, targetId].map((x) => ms!.blocks.find((b) => b.id === x));
+  if (!moved || !target) return;
+  if (moved.out !== target.out && !(await op(api.setBlockOut(ms.id, id, target.out)))) return;
   const order = ms.blocks.map((b) => b.id).filter((b) => b !== id);
   order.splice(order.indexOf(targetId) + (after ? 1 : 0), 0, id);
   op(api.setOrder(ms.id, order));
@@ -761,7 +799,7 @@ function renderHistory() {
       confirmButton("Roll back whole vault", () => rollBack(h.snapshot.id, h.snapshot.message), "ghost danger"),
     );
     li.append(actions);
-    li.onclick = () => {
+    clickable(li, () => {
       compareSnap = compareSnap?.text === h.text ? null : { label: `${label}, ${when(h.snapshot.time)}`, text: h.text };
       if (ghost === 0) {
         $<HTMLInputElement>("rng-ghost").value = "60";
@@ -770,7 +808,7 @@ function renderHistory() {
       renderCompare();
       renderHistory();
       setGhost(ghost);
-    };
+    });
     list.append(li);
   }
 }
@@ -898,7 +936,7 @@ function renderWorld() {
         el("span", { className: "name", textContent: e.name }),
       );
       if (e.status === "draft") li.append(el("span", { className: "badge draft", textContent: "draft" }));
-      li.onclick = () => openNote(e.path).catch(fail);
+      clickable(li, () => openNote(e.path).catch(fail));
       list.append(li);
     }
     group.append(list);
@@ -914,9 +952,9 @@ function renderWorld() {
     const missing = i.message.match(/^\[\[(.+?)\]\] is linked/);
     if (missing) {
       li.title = "Create this note";
-      li.onclick = () => newEntry("character", missing[1]);
+      clickable(li, () => newEntry("character", missing[1]));
     } else if (i.path) {
-      li.onclick = () => openNote(i.path).catch(fail);
+      clickable(li, () => openNote(i.path).catch(fail));
     }
     ul.append(li);
   }
@@ -1177,7 +1215,7 @@ async function loadSceneCast() {
       const ul = el("ul", { className: "list" });
       for (const e of info.events) {
         const li = el("li", {}, swatch("event"), el("span", { className: "name", textContent: e.name }));
-        li.onclick = () => openNote(e.path).catch(fail);
+        clickable(li, () => openNote(e.path).catch(fail));
         ul.append(li);
       }
       box.append(ul);
@@ -1211,7 +1249,7 @@ async function loadConnections() {
   const item = (text: string, kind: string, open: () => void, meta = "") => {
     const li = el("li", {}, swatch(kind), el("span", { className: "name", textContent: text }));
     if (meta) li.append(el("span", { className: "meta", textContent: meta }));
-    li.onclick = open;
+    clickable(li, open);
     return li;
   };
   const kindOf = (path: string) => worldEntities.find((e) => e.path === path)?.kind ?? "note";
@@ -1308,7 +1346,7 @@ function currentBook(): Book | null {
     return {
       title: ms.title,
       author: settings.author,
-      chapters: ms.blocks.map((b) => ({
+      chapters: ms.blocks.filter((b) => !b.out).map((b) => ({
         title: b.raw ? null : b.title,
         text: (b.variants.find((v) => v.id === b.live) ?? b.variants[b.variants.length - 1])?.text ?? "",
       })),
@@ -1417,35 +1455,51 @@ async function runExport() {
   }
 }
 
+/** Is this cut the current one: the same pages in, in its order, with its live takes? */
 function cutMatches(cut: { order: string[]; picks: Record<string, string> }) {
   if (!ms) return false;
-  return (
-    cut.order.length === ms.blocks.length &&
-    ms.blocks.every((b, i) => cut.order[i] === b.id && (cut.picks[b.id] ?? b.live) === b.live)
-  );
+  const kept = ms.blocks.filter((b) => !b.out);
+  return cut.order.length === kept.length && kept.every((b, i) => cut.order[i] === b.id && (cut.picks[b.id] ?? b.live) === b.live);
 }
 
 function renderCuts() {
   const list = $("list-cuts");
   list.replaceChildren();
   if (!ms) return;
-  if (!ms.cuts.length) list.append(el("li", { className: "hint", textContent: "Save the current order and live versions as a named cut." }));
-  for (const cut of ms.cuts) {
+  if (!ms.cuts.length) {
+    list.append(el("li", { className: "hint", textContent: "Save the pages that are in, their order and ★ live versions, as a named cut." }));
+  }
+  ms.cuts.forEach((cut, at) => {
     const li = el(
       "li",
-      { className: cutMatches(cut) ? "active" : "", title: "Apply this cut" },
+      { className: cutMatches(cut) ? "active" : "", title: `Apply this cut: its ${cut.order.length} pages in its order, the rest left out` },
       el("span", { className: "name", textContent: cut.name }),
-      confirmButton("×", () => op(api.cutOp(ms!.id, "delete", cut.name))),
+      el("span", { className: "meta", textContent: String(cut.order.length) }),
+      Object.assign(confirmButton("×", () => deleteCut(cut, at)), { title: "Delete this cut (click twice; Undo brings it back). Pages are untouched." }),
     );
-    li.onclick = () => applyCut(cut.name);
+    clickable(li, () => applyCut(cut.name));
     list.append(li);
-  }
+  });
 }
 
 async function applyCut(name: string) {
   if (!ms) return;
   await flushSaves();
-  if (await op(api.cutOp(ms.id, "apply", name))) toast(`Applied cut “${name}”.`);
+  const m = await op(api.cutOp(ms.id, "apply", name));
+  if (!m) return;
+  const left = m.blocks.filter((b) => b.out).length;
+  toast(`Applied cut “${name}”.${left ? ` ${left} page${left === 1 ? "" : "s"} left out.` : ""}`);
+}
+
+/** Deleting a cut never touches pages, and can be undone for a few seconds. */
+async function deleteCut(cut: Cut, at: number) {
+  if (!ms) return;
+  const id = ms.id;
+  if (!(await op(api.cutOp(id, "delete", cut.name)))) return;
+  toast(`Deleted cut “${cut.name}”. Your pages are untouched.`, false, {
+    label: "Undo",
+    run: () => op(api.restoreCut(id, cut, at)).then((m) => m && toast(`Cut “${cut.name}” is back.`)),
+  });
 }
 
 function renderNotes() {
@@ -1456,7 +1510,7 @@ function renderNotes() {
       className: doc?.kind === "note" && doc.path === n.path ? "active" : "",
       title: n.path,
     }, el("span", { className: "name", textContent: n.path.replace(/\.md$/, "") }));
-    li.onclick = () => openNote(n.path).catch(fail);
+    clickable(li, () => openNote(n.path).catch(fail));
     list.append(li);
   }
   if (!notes.length) list.append(el("li", { className: "hint", textContent: "No notes yet." }));
@@ -1471,13 +1525,16 @@ function renderLexicon() {
       {},
       el("span", { className: "name", textContent: word }),
       el("span", { className: "meta", textContent: say }),
-      confirmButton("×", () => {
-        delete lexicon[word];
-        saveLexicon();
-      }),
+      Object.assign(
+        confirmButton("×", () => {
+          delete lexicon[word];
+          saveLexicon();
+        }),
+        { title: "Remove this pronunciation (click twice)" },
+      ),
     );
     li.title = "Hear it";
-    li.onclick = () => narrator.play(sentences(word).map((s) => ({ ...s, highlight: false })));
+    clickable(li, () => narrator.play(sentences(word).map((s) => ({ ...s, highlight: false }))));
     list.append(li);
   }
 }
@@ -1513,7 +1570,7 @@ async function loadManuscripts() {
     const remove = confirmButton("×", () => deleteManuscript(m.id, m.title).catch(fail));
     remove.title = "Delete this manuscript (click twice; Undo brings it back)";
     li.append(remove);
-    li.onclick = () => openManuscript(m.id).catch(fail);
+    clickable(li, () => openManuscript(m.id).catch(fail));
     list.append(li);
   }
   if (!all.length) list.append(el("li", { className: "hint", textContent: "Import a script, or every draft of one, to start." }));
@@ -1724,11 +1781,11 @@ function renderProps() {
   rows.forEach((p, i) => {
     if (i === propEdit) return box.append(propEditor(block.id, rows, i));
     const row = el("div", { className: "prop", title: "Click to edit" }, el("span", { className: "k", textContent: p.key }), el("span", { className: "v" }, ...linked(p.value)));
-    row.onclick = () => {
+    clickable(row, () => {
       propDraft = rows.map((x) => ({ ...x }));
       propEdit = i;
       renderProps();
-    };
+    });
     box.append(row);
   });
   if (propEdit === null) {
@@ -1821,7 +1878,7 @@ function renderProgress() {
   const goal = ms?.target?.total;
   box.hidden = !goal;
   if (!ms || !goal) return;
-  const n = ms.blocks.reduce((sum, b) => sum + words(b.variants.find((v) => v.id === b.live)?.text ?? ""), 0);
+  const n = ms.blocks.filter((b) => !b.out).reduce((sum, b) => sum + words(b.variants.find((v) => v.id === b.live)?.text ?? ""), 0);
   box.querySelector<HTMLElement>(".bar span")!.style.width = `${Math.min(100, (100 * n) / goal)}%`;
   box.querySelector(".label")!.textContent = `${n.toLocaleString()} of ${goal.toLocaleString()} words`;
   box.title = `${Math.round((100 * n) / goal)}% of your target, counting the live take of each page`;
@@ -2049,7 +2106,7 @@ async function runSearch() {
       el("span", { className: "name", textContent: h.title }),
       el("span", { className: "meta", textContent: h.kind === "note" ? "note" : h.context }));
     const li = el("li", { title: h.kind === "note" ? h.path : `${h.context} — ${h.title}` }, head, el("div", { className: "snippet" }, ...marked(h.snippet, words)));
-    li.onclick = async () => {
+    clickable(li, async () => {
       list.querySelectorAll("li.active").forEach((x) => x.classList.remove("active"));
       li.classList.add("active");
       if (h.kind === "note") await openNote(h.path);
@@ -2058,7 +2115,7 @@ async function runSearch() {
         openBlock(h.block, h.take);
       }
       editor.find(words[0]);
-    };
+    });
     list.append(li);
   }
 }
@@ -2216,8 +2273,9 @@ function wire() {
   $("btn-export-open").onclick = () => {
     const book = currentBook();
     if (!book) return toast("Open a manuscript or a note to export.");
+    const left = ms ? ms.blocks.filter((b) => b.out).length : 0;
     $("export-what").textContent = ms
-      ? `The live cut of “${ms.title}”: ${ms.blocks.length} blocks, in outline order, using each block's ★ live version.`
+      ? `The current cut of “${ms.title}”: ${book.chapters.length} pages, in outline order, using each page's ★ live version.${left ? ` ${left} left out.` : ""}`
       : `The note “${book.title}”.`;
     $<HTMLInputElement>("export-author").value = settings.author;
     $("export-progress").textContent = "";
