@@ -368,7 +368,8 @@ body.transcribing #btn-dictate { opacity: 0.7; cursor: progress; }
 /* export */
 .formats { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 .formats label { display: flex; gap: 8px; align-items: baseline; }
-.formats .hint { margin: 0; }
+.formats .hint { margin: 0; flex: 1 1 0; }
+.publish-tag { flex: none; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 
 /* ---------- world ---------- */
 .mark { stroke: var(--graph-surface); stroke-width: 2px; }

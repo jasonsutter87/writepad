@@ -16,7 +16,7 @@ releasesURL = 'https://github.com/jasonsutter87/writepad/releases/latest'
 issuesURL = 'https://github.com/jasonsutter87/writepad/issues'
 # Checkout link for the $5 Publish unlock (Lemon Squeezy, Gumroad, Stripe Payment Link...).
 # Leave empty and the buy buttons say "Coming soon".
-buyURL = ''
+buyURL = 'https://writepad.lemonsqueezy.com/checkout/buy/c94af912-7180-45cb-bc60-69c7cb32d5e1'
 price = '$5'
 author = 'Jason Sutter'
 # Help topics are grouped on /docs/ in this order (each page sets `group`).

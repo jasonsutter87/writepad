@@ -24,14 +24,13 @@ Started 2026-10-26. Ordered by what blocks what.
 
 ## 3. Getting paid: the $5 Publish unlock
 
-Today the app has **no unlock**: EPUB and MP3 export are free in every build, but the pricing page sells them for $5.
+EPUB and MP3 export unlock with a Lemon Squeezy license key (`src-tauri/src/license.rs`): the app activates the key online once, keeps it in `license.json` next to settings, and works offline from then on. Keys from any store other than WRITEpad (#508244) are refused.
 
-- [ ] **Decide how the unlock works** (circle one):
-  - **A. Lemon Squeezy license key.** Paste the key once; the app checks it with Lemon Squeezy one time, then works offline forever. Least to build.
-  - **B. Own signed key.** A Netlify function signs the buyer's email on purchase; the app checks the signature offline. Most private, more to build.
-  - **C. Honour system.** No lock, just a "Support WRITEpad: $5" button.
-- [ ] Set up checkout (Lemon Squeezy or Gumroad) and put its link in `buyURL` (website/hugo.toml). The buttons say "Coming soon" until then.
-- [ ] Build the unlock in the app: "Unlock Publish" in Export, enter a key in Settings, and a way to restore it on a new computer.
+- [x] **Decide how the unlock works:** A, a Lemon Squeezy license key.
+- [x] Set up checkout: store "WRITEpad" (writepad.lemonsqueezy.com), product "WRITEpad Publish", $5 one-time, keys never expire, 5 computers per key. Its link is in `buyURL` (website/hugo.toml).
+- [x] Build the unlock in the app: Publish tags in Export, the Unlock Publish dialog, and Settings → Publish to remove the key and free the computer.
+- [ ] Buy a test key (Lemon Squeezy test mode, card 4242 4242 4242 4242) and unlock an installed build with it.
+- [ ] Verify identity in Lemon Squeezy (Setup → Activate Store) so the store can take live payments, then switch test mode off.
 - [ ] Say plainly on the pricing page that it's open source, and what the $5 supports.
 
 ## 4. Site and trust

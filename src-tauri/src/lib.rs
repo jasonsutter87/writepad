@@ -1,4 +1,5 @@
 mod dictate;
+mod license;
 mod settings;
 mod tts_setup;
 mod watch;
@@ -15,6 +16,8 @@ use tauri::{ipc::Response, AppHandle, Emitter, Manager, State};
 struct AppState {
     settings: Mutex<Settings>,
     settings_path: PathBuf,
+    /// The Publish unlock (license.rs), next to settings.json.
+    license_path: PathBuf,
     cache_dir: PathBuf,
     worker: Mutex<Option<Worker>>,
     /// OS data dir (~/Library/Application Support), where murmur keeps its models and key.
@@ -44,6 +47,13 @@ impl AppState {
             *slot = Some(Worker::start(&s.python, &s.model_dir, &self.cache_dir)?);
         }
         f(slot.as_mut().unwrap())
+    }
+
+    /// EPUB and MP3 export are the Publish unlock.
+    fn publish_unlocked(&self) -> Result<(), String> {
+        license::load(&self.license_path)
+            .map(|_| ())
+            .ok_or_else(|| "EPUB and MP3 export are part of Publish. Unlock it in the Export window.".to_string())
     }
 }
 
@@ -108,11 +118,6 @@ fn create_note(state: State<AppState>, name: String) -> Result<String, String> {
     vault::create(&state.vault()?, &name)
 }
 
-#[tauri::command]
-fn list_manuscripts(state: State<AppState>) -> Result<Vec<ManuscriptInfo>, String> {
-    Ok(manuscript::list(&state.vault()?))
-}
-
 /// Copy a picture chosen on disk into the vault's attachments folder.
 #[tauri::command]
 fn import_image(state: State<AppState>, path: String) -> Result<String, String> {
@@ -132,6 +137,11 @@ fn save_image(state: State<AppState>, request: tauri::ipc::Request<'_>) -> Resul
 #[tauri::command]
 fn read_image(state: State<AppState>, path: String) -> Result<Response, String> {
     vault::read_image(&state.vault()?, &path).map(Response::new)
+}
+
+#[tauri::command]
+fn list_manuscripts(state: State<AppState>) -> Result<Vec<ManuscriptInfo>, String> {
+    Ok(manuscript::list(&state.vault()?))
 }
 
 #[tauri::command]
@@ -398,7 +408,13 @@ async fn history_restore_all(app: AppHandle, id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn export_book(app: AppHandle, book: export::Book, format: String, path: String) -> Result<(), String> {
-    blocking(app, move |st| export::write_book(&book, &format, std::path::Path::new(&path), &st.cache_dir.join("export"))).await
+    blocking(app, move |st| {
+        if format == "epub" {
+            st.publish_unlocked()?;
+        }
+        export::write_book(&book, &format, std::path::Path::new(&path), &st.cache_dir.join("export"))
+    })
+    .await
 }
 
 /// Narrate one chapter to an MP3 file. Sentences come pre-split from the
@@ -415,6 +431,7 @@ async fn export_audio_chapter(
     artist: String,
 ) -> Result<(), String> {
     blocking(app, move |st| {
+        st.publish_unlocked()?;
         let lexicon = narrate::load_lexicon(st.vault().ok().as_deref());
         let mut wavs = Vec::with_capacity(segments.len());
         for seg in &segments {
@@ -424,6 +441,21 @@ async fn export_audio_chapter(
         export::mp3(wavs, std::path::Path::new(&path), &title, &album, &artist)
     })
     .await
+}
+
+#[tauri::command]
+fn license_status(state: State<AppState>) -> Option<license::License> {
+    license::load(&state.license_path)
+}
+
+#[tauri::command]
+async fn activate_license(app: AppHandle, key: String) -> Result<license::License, String> {
+    blocking(app, move |st| license::activate(&st.license_path, &key)).await
+}
+
+#[tauri::command]
+async fn deactivate_license(app: AppHandle) -> Result<(), String> {
+    blocking(app, |st| license::deactivate(&st.license_path)).await
 }
 
 #[tauri::command]
@@ -667,6 +699,8 @@ fn site_url(page: &str) -> Option<String> {
     Some(match page {
         "" => format!("{SITE}/docs/"),
         "blog" => format!("{SITE}/blog/"),
+        // The Publish checkout lives on the pricing page.
+        "buy" => format!("{SITE}/pricing/"),
         "issues" => ISSUES.to_string(),
         // Narration setup sends people here when they have no Python 3.10+.
         "python" => "https://www.python.org/downloads/".to_string(),
@@ -800,10 +834,12 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
             let settings_path = app.path().app_config_dir()?.join("settings.json");
+            let license_path = settings_path.with_file_name("license.json");
             let cache_dir = app.path().app_cache_dir()?;
             app.manage(AppState {
                 settings: Mutex::new(settings::load(&settings_path)),
                 settings_path,
+                license_path,
                 cache_dir,
                 worker: Mutex::new(None),
                 data_dir: app.path().data_dir()?,
@@ -860,6 +896,9 @@ pub fn run() {
             cut_op,
             restore_cut,
             open_help,
+            license_status,
+            activate_license,
+            deactivate_license,
             list_comments,
             set_comments,
             open_demo,

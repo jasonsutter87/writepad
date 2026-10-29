@@ -33,7 +33,7 @@ if (import.meta.env.DEV && !w.__TAURI_INTERNALS__) {
       if (cmd.startsWith("plugin:")) return plugin[cmd] ?? null;
       if (cmd === "open_help") {
         const page = String(args.page ?? "");
-        const path = page === "blog" ? "blog/" : page ? `docs/${page}/` : "docs/";
+        const path = page === "blog" ? "blog/" : page === "buy" ? "pricing/" : page ? `docs/${page}/` : "docs/";
         const url = page === "python" ? "https://www.python.org/downloads/" : `https://writepad-app.netlify.app/${path}`;
         window.open(url, "_blank", "noopener");
         return null;
