@@ -39,6 +39,7 @@ if (import.meta.env.DEV && !w.__TAURI_INTERNALS__) {
         return null;
       }
       const res = await fetch(`/api/${cmd}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(args) });
+      if (cmd === "read_image" && res.ok) return res.arrayBuffer();
       const body = await res.json();
       if (!res.ok) throw body;
       return body;

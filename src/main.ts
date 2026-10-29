@@ -66,6 +66,31 @@ function toast(msg: string, error = false, action?: { label: string; run: () => 
 }
 const fail = (e: unknown) => toast(String(e), true);
 
+// Pictures in pages: web addresses load as they are; anything else is a file in the vault,
+// read once per vault and kept as a blob URL so retyping nearby doesn't reload it.
+const imageCache = new Map<string, Promise<string>>();
+const IMAGE_MIME: Record<string, string> = { svg: "image/svg+xml", jpg: "image/jpeg" };
+function imageUrl(src: string): Promise<string> {
+  if (/^(https?:|data:)/i.test(src)) return Promise.resolve(src);
+  const path = decodeURI(src.replace(/^<|>$/g, "")).replace(/^\.?\//, "");
+  const key = `${settings?.vault}\n${path}`;
+  let url = imageCache.get(key);
+  if (!url) {
+    const ext = path.split(".").pop()!.toLowerCase();
+    url = api.readImage(path).then((bytes) => URL.createObjectURL(new Blob([bytes], { type: IMAGE_MIME[ext] ?? `image/${ext}` })));
+    url.catch(() => imageCache.delete(key));
+    imageCache.set(key, url);
+  }
+  return url;
+}
+
+async function pickImage() {
+  const picked = await open({ multiple: false, title: "Insert a picture", filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp"] }] });
+  if (typeof picked !== "string") return;
+  const name = picked.split(/[\\/]/).pop()!.replace(/\.[^.]+$/, "");
+  editor.insertImage(await api.importImage(picked), name);
+}
+
 const words = (s: string) => (s.match(/[\p{L}\p{N}’']+/gu) ?? []).length;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]> = {}, ...kids: (Node | string)[]) {
@@ -390,7 +415,10 @@ const editor = new Editor($("editor"), {
   onComment(id) {
     openComment(id);
   },
+  imageUrl,
+  saveImage: (file) => api.saveImage(file).catch((e) => (fail(e), null)),
   onSelect(text) {
+    $<HTMLSelectElement>("fmt-heading").value = String(editor.headingLevel);
     const n = text ? words(text) : 0;
     $("sel-words").textContent = n ? `${n.toLocaleString()} word${n === 1 ? "" : "s"} selected` : "";
   },
@@ -2506,6 +2534,16 @@ function wire() {
   $("btn-script-add").onclick = () => addScript().catch(fail);
   $("fmt-b").onclick = () => editor.bold();
   $("fmt-i").onclick = () => editor.italic();
+  $("fmt-s").onclick = () => editor.strike();
+  $("fmt-code").onclick = () => editor.code();
+  $("fmt-link").onclick = () => editor.link();
+  $("fmt-bullet").onclick = () => editor.block("bullet");
+  $("fmt-number").onclick = () => editor.block("number");
+  $("fmt-task").onclick = () => editor.block("task");
+  $("fmt-quote").onclick = () => editor.block("quote");
+  $("fmt-hr").onclick = () => editor.divider();
+  $("fmt-image").onclick = () => pickImage().catch(fail);
+  $<HTMLSelectElement>("fmt-heading").onchange = (e) => editor.heading(Number((e.target as HTMLSelectElement).value));
   $("fmt-left").onclick = () => editor.align("left");
   $("fmt-center").onclick = () => editor.align("center");
   $("fmt-right").onclick = () => editor.align("right");

@@ -125,3 +125,52 @@ pub fn restore(vault: &Path, id: &str) -> Result<TrashedNote, String> {
     let _ = fs::remove_dir_all(&dir);
     Ok(record)
 }
+
+/// Where pictures dropped or pasted into a page are kept, as in Obsidian's default.
+pub const ATTACHMENTS: &str = "attachments";
+
+const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp"];
+
+fn image_ext(name: &str) -> Option<String> {
+    let ext = Path::new(name).extension()?.to_string_lossy().to_lowercase();
+    IMAGE_EXTS.contains(&ext.as_str()).then_some(ext)
+}
+
+/// Save an image into the vault's attachments folder under a name not already
+/// taken, and return its vault-relative path for a `![](...)` link.
+pub fn save_image(vault: &Path, name: &str, data: &[u8]) -> Result<String, String> {
+    let ext = image_ext(name).ok_or_else(|| format!("Not an image WRITEpad can show: {name}"))?;
+    let stem: String = Path::new(name)
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .collect();
+    let stem = stem.trim_matches('-');
+    let stem = if stem.is_empty() { "image" } else { stem };
+    let dir = vault.join(ATTACHMENTS);
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let mut file = format!("{stem}.{ext}");
+    let mut n = 2;
+    while dir.join(&file).exists() {
+        file = format!("{stem}-{n}.{ext}");
+        n += 1;
+    }
+    crate::write_atomic(&dir.join(&file), data)?;
+    Ok(format!("{ATTACHMENTS}/{file}"))
+}
+
+/// Copy an image from anywhere on disk into the vault (see `save_image`).
+pub fn import_image(vault: &Path, from: &Path) -> Result<String, String> {
+    let name = from.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    image_ext(&name).ok_or_else(|| format!("Not an image WRITEpad can show: {name}"))?;
+    let data = fs::read(from).map_err(|e| e.to_string())?;
+    save_image(vault, &name, &data)
+}
+
+/// An image's bytes, for showing it in the page. Only images, only inside the vault.
+pub fn read_image(vault: &Path, rel: &str) -> Result<Vec<u8>, String> {
+    image_ext(rel).ok_or_else(|| format!("Not an image: {rel}"))?;
+    fs::read(resolve(vault, rel)?).map_err(|e| e.to_string())
+}
