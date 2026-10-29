@@ -111,8 +111,29 @@
         <div id="props" class="props"></div>
         <datalist id="prop-keys"></datalist>
         <div id="format-bar" class="format-bar">
+          <select id="fmt-heading" class="fmt-heading" title="Heading (⌥⌘1–6, ⌥⌘0 for body text)" aria-label="Text style">
+            <option value="0">Body</option>
+            <option value="1">Heading 1</option>
+            <option value="2">Heading 2</option>
+            <option value="3">Heading 3</option>
+            <option value="4">Heading 4</option>
+            <option value="5">Heading 5</option>
+            <option value="6">Heading 6</option>
+          </select>
+          <span class="sep"></span>
           <button id="fmt-b" class="ghost" type="button" title="Bold (⌘B)"><b>B</b></button>
           <button id="fmt-i" class="ghost" type="button" title="Italic (⌘I)"><i>I</i></button>
+          <button id="fmt-s" class="ghost" type="button" title="Strikethrough (⇧⌘X)"><s>S</s></button>
+          <button id="fmt-code" class="ghost" type="button" title="Code (⌘E)"><code>&lt;/&gt;</code></button>
+          <button id="fmt-link" class="ghost" type="button" title="Link (⌘K)">Link</button>
+          <span class="sep"></span>
+          <button id="fmt-bullet" class="ghost" type="button" title="Bulleted list (⇧⌘8)">• List</button>
+          <button id="fmt-number" class="ghost" type="button" title="Numbered list (⇧⌘7)">1. List</button>
+          <button id="fmt-task" class="ghost" type="button" title="Checklist (⇧⌘9)">☐ Tasks</button>
+          <button id="fmt-quote" class="ghost" type="button" title="Quote (⇧⌘.)">“ Quote</button>
+          <span class="sep"></span>
+          <button id="fmt-image" class="ghost" type="button" title="Insert a picture (or paste or drop one onto the page)">Image</button>
+          <button id="fmt-hr" class="ghost" type="button" title="Divider">―</button>
           <span class="sep"></span>
           <button id="fmt-left" class="ghost" type="button" title="Align left (⌘⇧L)">Left</button>
           <button id="fmt-center" class="ghost" type="button" title="Center (⌘⇧E), saved as &gt; text &lt;">Center</button>

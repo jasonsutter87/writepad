@@ -358,6 +358,14 @@ export const api = {
   search: (query: string) => invoke<SearchHit[]>("search_vault", { query }),
   readNote: (path: string) => invoke<string>("read_note", { path }),
   writeNote: (path: string, text: string) => invoke<void>("write_note", { path, text }),
+  /** Copy a picture into the vault's attachments folder; returns its vault-relative path. */
+  importImage: (path: string) => invoke<string>("import_image", { path }),
+  /** Save pasted or dropped picture bytes into the vault (the name is sent as a header, so ASCII only). */
+  saveImage: async (file: File) =>
+    invoke<string>("save_image", new Uint8Array(await file.arrayBuffer()), {
+      headers: { "x-name": file.name.replace(/[^\w.-]/g, "-") || `image.${file.type.split(/[/+]/)[1] ?? "png"}` },
+    }),
+  readImage: (path: string) => invoke<ArrayBuffer>("read_image", { path }),
   createNote: (name: string) => invoke<string>("create_note", { name }),
 
   listManuscripts: () => invoke<ManuscriptInfo[]>("list_manuscripts"),

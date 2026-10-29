@@ -2,11 +2,12 @@
 // another variant, deleted words drawn as ghosts) and the narration highlight.
 import { minimalSetup } from "codemirror";
 import { redo, undo } from "@codemirror/commands";
-import { markdown } from "@codemirror/lang-markdown";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorSelection, EditorState, Prec, StateEffect, StateField, type Extension, type Range } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, WidgetType, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 import type { DiffOp } from "./api";
+import { livePreview, type ImageResolver } from "./livepreview";
 import { classify, cycleLine, isScreenplay, type LineKind } from "./screenplay";
 
 class GhostWidget extends WidgetType {
@@ -239,6 +240,87 @@ export function setAlign(view: EditorView, align: "left" | "center" | "right"): 
   return true;
 }
 
+/** The selected lines, each once, in order. */
+function selectedLines(state: EditorState) {
+  const seen = new Set<number>();
+  const lines = [];
+  for (const r of state.selection.ranges) {
+    for (let n = state.doc.lineAt(r.from).number; n <= state.doc.lineAt(r.to).number; n++) {
+      if (!seen.has(n)) lines.push(state.doc.line(n));
+      seen.add(n);
+    }
+  }
+  return lines.sort((a, b) => a.number - b.number);
+}
+
+const HEADING = /^(#{1,6})\s+/;
+
+/** The heading level (1–6) of the line the cursor is on, or 0 for body text. */
+export function headingLevel(state: EditorState): number {
+  const m = HEADING.exec(state.doc.lineAt(state.selection.main.head).text);
+  return m ? m[1].length : 0;
+}
+
+/** Make the selected lines a heading of this level (0 = body text); the same level again turns it off. */
+export function setHeading(view: EditorView, level: number): boolean {
+  const lines = selectedLines(view.state);
+  if (level && lines.every((l) => HEADING.exec(l.text)?.[1].length === level)) level = 0;
+  const changes = lines.map((l) => {
+    const bare = l.text.replace(HEADING, "");
+    return { from: l.from, to: l.to, insert: level ? `${"#".repeat(level)} ${bare}` : bare };
+  });
+  view.dispatch({ changes, userEvent: "input.format" });
+  return true;
+}
+
+export type BlockKind = "bullet" | "number" | "task" | "quote";
+const BLOCK_PREFIX = /^(\s*)(?:[-*+]\s+\[[ xX]\]\s+|[-*+]\s+|\d+[.)]\s+|>(?!>)\s?(?!.*<\s*$))?/;
+const kindOf = (text: string): BlockKind | null =>
+  /^\s*[-*+]\s+\[[ xX]\]\s/.test(text) ? "task" : /^\s*[-*+]\s/.test(text) ? "bullet" : /^\s*\d+[.)]\s/.test(text) ? "number" : /^\s*>(?!>)(?!.*<\s*$)/.test(text) ? "quote" : null;
+
+/** Turn the selected lines into a list or quote, or back to plain lines if they already are one. */
+export function toggleBlock(view: EditorView, kind: BlockKind): boolean {
+  const lines = selectedLines(view.state).filter((l) => l.text.trim() || view.state.selection.main.empty);
+  const off = lines.length > 0 && lines.every((l) => kindOf(l.text) === kind);
+  let n = 0;
+  const changes = lines.map((l) => {
+    const [whole, indent] = BLOCK_PREFIX.exec(l.text)!;
+    const prefix = off ? "" : kind === "bullet" ? "- " : kind === "number" ? `${++n}. ` : kind === "task" ? "- [ ] " : "> ";
+    return { from: l.from, to: l.from + whole.length, insert: indent + prefix };
+  });
+  view.dispatch({ changes, userEvent: "input.format" });
+  return true;
+}
+
+/** Make the selection a link (or start an empty one) and put the cursor where the address goes. */
+export function insertLink(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.sliceDoc(from, to);
+  const url = /^https?:\/\/\S+$/.test(text) ? text : "";
+  const label = url ? "" : text;
+  const insert = `[${label}](${url})`;
+  // With words selected, type the address next; with an address selected, the words.
+  const at = label || !url ? from + label.length + 3 : from + 1;
+  view.dispatch({ changes: { from, to, insert }, selection: { anchor: at }, scrollIntoView: true, userEvent: "input.format" });
+  return true;
+}
+
+/** Put a block (a picture, a divider) on its own lines at the cursor, with a blank line on each side. */
+export function insertBlock(view: EditorView, block: string): boolean {
+  const { from, to } = view.state.selection.main;
+  const doc = view.state.doc;
+  const before = doc.sliceString(Math.max(0, from - 2), from);
+  const after = doc.sliceString(to, to + 2);
+  const lead = from === 0 ? "" : before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
+  const trail = after.startsWith("\n\n") ? "" : after.startsWith("\n") ? "\n" : "\n\n";
+  const insert = lead + block + trail;
+  view.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, scrollIntoView: true, userEvent: "input" });
+  return true;
+}
+
+const IMAGE_TYPES = /^image\/(png|jpe?g|gif|webp|svg\+xml|avif|bmp)$/;
+const imageFiles = (list: FileList | null | undefined) => Array.from(list ?? []).filter((f) => IMAGE_TYPES.test(f.type));
+
 /** In a screenplay, Tab turns the current line into the next kind of line. */
 function cycle(view: EditorView, dir: number): boolean {
   const text = view.state.doc.toString();
@@ -281,6 +363,10 @@ export interface EditorHooks {
   onSelect?: (text: string) => void;
   /** A click on commented words. */
   onComment?: (id: string) => void;
+  /** Where a picture's link points, as something an <img> can show. */
+  imageUrl: ImageResolver;
+  /** A picture pasted or dropped in: save it to the vault and give back its link, or null. */
+  saveImage?: (file: File) => Promise<string | null>;
 }
 
 /** The `[[target]]` (alias stripped) under `pos`, if any. */
@@ -296,19 +382,35 @@ function linkAt(state: EditorState, pos: number): string | null {
 /** How the page looks: a sheet of paper, plain draft, or code with line numbers. */
 export type ViewMode = "page" | "draft" | "code";
 
-const viewExtensions = (mode: ViewMode): Extension =>
-  mode === "code" ? [lineNumbers(), highlightActiveLineGutter(), highlightActiveLine()] : [];
+// Code shows the markdown exactly as written; Page and Draft preview it.
+const viewExtensions = (mode: ViewMode, images: ImageResolver): Extension =>
+  mode === "code" ? [lineNumbers(), highlightActiveLineGutter(), highlightActiveLine()] : livePreview(images);
 
 export class Editor {
   readonly view: EditorView;
   private extensions: Extension[];
   private viewConf = new Compartment();
   private mode: ViewMode = "draft";
+  private images: ImageResolver;
 
   constructor(parent: HTMLElement, hooks: EditorHooks) {
+    this.images = hooks.imageUrl;
+    // Pictures pasted or dropped in go into the vault, and a link to each goes where they landed.
+    const takeImages = (view: EditorView, files: File[], at?: number) => {
+      if (!files.length || !hooks.saveImage) return false;
+      if (at != null) view.dispatch({ selection: { anchor: at } });
+      (async () => {
+        for (const f of files) {
+          const path = await hooks.saveImage!(f);
+          if (path) insertBlock(view, `![${f.name.replace(/\.[^.]+$/, "").replace(/^image$/, "")}](${path})`);
+        }
+      })();
+      return true;
+    };
     this.extensions = [
       minimalSetup,
-      markdown(),
+      // GitHub-flavoured: adds ~~strikethrough~~, - [ ] tasks and tables.
+      markdown({ base: markdownLanguage }),
       EditorView.lineWrapping,
       placeholder("Start writing…"),
       onionField,
@@ -341,6 +443,14 @@ export class Editor {
       Prec.high(keymap.of([
         { key: "Mod-b", run: (v) => toggleWrap(v, "**") },
         { key: "Mod-i", run: (v) => toggleWrap(v, "*") },
+        { key: "Mod-Shift-x", run: (v) => toggleWrap(v, "~~") },
+        { key: "Mod-e", run: (v) => toggleWrap(v, "`") },
+        { key: "Mod-k", run: insertLink },
+        { key: "Mod-Shift-8", run: (v) => toggleBlock(v, "bullet") },
+        { key: "Mod-Shift-7", run: (v) => toggleBlock(v, "number") },
+        { key: "Mod-Shift-9", run: (v) => toggleBlock(v, "task") },
+        { key: "Mod-Shift-.", run: (v) => toggleBlock(v, "quote") },
+        ...[0, 1, 2, 3, 4, 5, 6].map((n) => ({ key: `Mod-Alt-${n}`, run: (v: EditorView) => setHeading(v, n) })),
         { key: "Mod-Shift-e", run: (v) => setAlign(v, "center") },
         { key: "Mod-Shift-r", run: (v) => setAlign(v, "right") },
         { key: "Mod-Shift-l", run: (v) => setAlign(v, "left") },
@@ -358,6 +468,18 @@ export class Editor {
         }
       }),
       EditorView.domEventHandlers({
+        paste: (e, view) => {
+          const files = imageFiles(e.clipboardData?.files);
+          if (!files.length) return false;
+          e.preventDefault();
+          return takeImages(view, files);
+        },
+        drop: (e, view) => {
+          const files = imageFiles(e.dataTransfer?.files);
+          if (!files.length) return false;
+          e.preventDefault();
+          return takeImages(view, files, view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? undefined);
+        },
         click: (e) => {
           const id = (e.target as HTMLElement).closest<HTMLElement>("[data-comment]")?.dataset.comment;
           if (id && hooks.onComment) hooks.onComment(id);
@@ -378,12 +500,12 @@ export class Editor {
   }
 
   private all(): Extension[] {
-    return [...this.extensions, this.viewConf.of(viewExtensions(this.mode))];
+    return [...this.extensions, this.viewConf.of(viewExtensions(this.mode, this.images))];
   }
 
   setViewMode(mode: ViewMode) {
     this.mode = mode;
-    this.view.dispatch({ effects: this.viewConf.reconfigure(viewExtensions(mode)) });
+    this.view.dispatch({ effects: this.viewConf.reconfigure(viewExtensions(mode, this.images)) });
   }
 
   /** Put the cursor at the end and start typing there. */
@@ -494,6 +616,47 @@ export class Editor {
 
   italic() {
     toggleWrap(this.view, "*");
+    this.view.focus();
+  }
+
+  strike() {
+    toggleWrap(this.view, "~~");
+    this.view.focus();
+  }
+
+  code() {
+    toggleWrap(this.view, "`");
+    this.view.focus();
+  }
+
+  heading(level: number) {
+    setHeading(this.view, level);
+    this.view.focus();
+  }
+
+  /** The heading level of the cursor's line, 0 for body text. */
+  get headingLevel(): number {
+    return headingLevel(this.view.state);
+  }
+
+  block(kind: BlockKind) {
+    toggleBlock(this.view, kind);
+    this.view.focus();
+  }
+
+  link() {
+    insertLink(this.view);
+    this.view.focus();
+  }
+
+  divider() {
+    insertBlock(this.view, "---");
+    this.view.focus();
+  }
+
+  /** Put a picture at the cursor, on its own line. */
+  insertImage(path: string, alt = "") {
+    insertBlock(this.view, `![${alt}](${path.includes(" ") ? `<${path}>` : path})`);
     this.view.focus();
   }
 
