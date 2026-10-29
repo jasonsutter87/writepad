@@ -38,6 +38,14 @@ export interface WorldSuggestions {
   scenes: string[];
 }
 
+/** The Publish unlock (src-tauri/src/license.rs). */
+export interface License {
+  key: string;
+  instance: string;
+  email: string;
+  name: string;
+}
+
 export type ThemeMode = "system" | "light" | "dark" | "custom";
 
 export interface CustomTheme {
@@ -387,6 +395,9 @@ export const api = {
   newBookFolder: () => invoke<string>("new_book_folder"),
   /** Open a help topic ("cuts"), the help index (""), or the blog ("blog") in the browser. */
   openHelp: (page: string) => invoke<void>("open_help", { page }),
+  licenseStatus: () => invoke<License | null>("license_status"),
+  activateLicense: (key: string) => invoke<License>("activate_license", { key }),
+  deactivateLicense: () => invoke<void>("deactivate_license"),
   listComments: (manuscript: string) => invoke<Comment[]>("list_comments", { manuscript }),
   setComments: (manuscript: string, take: string, comments: Comment[]) => invoke<void>("set_comments", { manuscript, take, comments }),
   restoreBlock: (manuscript: string, block: string) => invoke<Manuscript>("restore_block", { manuscript, block }),

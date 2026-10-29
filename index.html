@@ -279,19 +279,33 @@
         <div class="formats">
           <label><input type="radio" name="fmt" value="docx" checked /> Word <span class="hint">.docx, for Word, Pages and Google Docs</span></label>
           <label><input type="radio" name="fmt" value="pdf" /> PDF <span class="hint">print-ready, 5.5×8.5″</span></label>
-          <label><input type="radio" name="fmt" value="epub" /> EPUB <span class="hint">e-readers</span></label>
+          <label><input type="radio" name="fmt" value="epub" /> EPUB <span class="publish-tag">Publish</span> <span class="hint">e-readers</span></label>
           <label><input type="radio" name="fmt" value="odt" /> OpenDocument <span class="hint">.odt, for LibreOffice</span></label>
           <label><input type="radio" name="fmt" value="rtf" /> Rich Text <span class="hint">.rtf, opens almost anywhere</span></label>
           <label><input type="radio" name="fmt" value="html" /> Web page <span class="hint">.html</span></label>
           <label><input type="radio" name="fmt" value="md" /> Markdown</label>
           <label><input type="radio" name="fmt" value="txt" /> Plain text</label>
-          <label><input type="radio" name="fmt" value="mp3" /> MP3 audiobook <span class="hint">one file per chapter, narrated; a screenplay gets its cast's voices</span></label>
+          <label><input type="radio" name="fmt" value="mp3" /> MP3 audiobook <span class="publish-tag">Publish</span> <span class="hint">one file per chapter, narrated; a screenplay gets its cast's voices</span></label>
         </div>
         <label class="field">Author <input id="export-author" placeholder="Your name" /></label>
         <div id="export-progress" class="hint"></div>
         <div class="actions">
           <button id="btn-export-close" value="cancel">Close</button>
           <button id="btn-do-export" type="button" class="primary">Export…</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dlg-unlock">
+      <form method="dialog">
+        <h2>Unlock Publish</h2>
+        <p class="hint">EPUB and MP3 audiobook export are Publish, a one-time purchase. Everything else in WRITEpad stays free. Your key arrives in the receipt email; WRITEpad checks it online once, then works offline.</p>
+        <p><button id="btn-buy-publish" type="button">Buy Publish…</button></p>
+        <label class="field">License key <input id="unlock-key" placeholder="From your receipt email" spellcheck="false" autocomplete="off" /></label>
+        <div id="unlock-status" class="hint"></div>
+        <div class="actions">
+          <button value="cancel">Not now</button>
+          <button id="btn-do-unlock" type="button" class="primary">Unlock</button>
         </div>
       </form>
     </dialog>
@@ -430,6 +444,8 @@
         <label class="field">Whisper model (shared with murmur) <input id="set-whisper" spellcheck="false" placeholder="small" /></label>
         <label class="field">Language <input id="set-lang" spellcheck="false" placeholder="en, es, or auto" /></label>
         <label class="check"><input id="set-polish" type="checkbox" /> Polish with Claude: drop ums and fix punctuation, keep every word</label>
+        <h3 class="dialog-section">Publish</h3>
+        <p class="row update-row"><span id="publish-status" class="hint"></span><span id="publish-action"></span></p>
         <h3 class="dialog-section">Updates</h3>
         <p class="hint">WRITEpad checks for new versions a few times a day. Every update is signed, and your work is saved before it installs.</p>
         <p class="row update-row"><span id="app-version"></span><button id="btn-check-updates" type="button">Check for updates</button><span id="update-status" class="hint"></span></p>

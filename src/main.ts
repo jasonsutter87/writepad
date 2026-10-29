@@ -2,7 +2,7 @@ import "./devbridge";
 import "./styles.css";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { api, type AudioSegment, type Block, type Book, type Cadence, type Comment, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
+import { api, type AudioSegment, type Block, type Book, type Cadence, type Comment, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type License, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
 import { applyTheme, contrast, PRESETS } from "./theme";
 import { Editor, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
@@ -17,6 +17,8 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 type Doc = { kind: "note"; path: string } | { kind: "block"; blockId: string; variantId: string } | null;
 
 let settings: Settings;
+/** The Publish unlock, or null while EPUB and MP3 export are locked. */
+let license: License | null = null;
 let ms: Manuscript | null = null;
 let doc: Doc = null;
 let compareId: string | null = null;
@@ -1749,6 +1751,61 @@ async function exportAudio(book: Book, dir: string) {
   toast(`Audiobook saved to ${dir}`);
 }
 
+function renderPublish() {
+  document.querySelectorAll<HTMLElement>(".publish-tag").forEach((t) => (t.hidden = !!license));
+  $("publish-status").textContent = license
+    ? `Unlocked${license.email ? ` for ${license.email}` : ""}: EPUB and MP3 export.`
+    : "EPUB and MP3 audiobook export are a one-time unlock.";
+  const unlock = el("button", { type: "button", textContent: "Unlock…" });
+  unlock.onclick = () => openUnlock();
+  $("publish-action").replaceChildren(
+    license ? Object.assign(confirmButton("Remove from this computer", removeLicense, "ghost"), { title: "Forget the key here and free this computer's activation for another one" }) : unlock,
+  );
+}
+
+let afterUnlock: (() => void) | null = null;
+
+/** Ask for a Publish key; `then` runs once it's unlocked. */
+function openUnlock(then?: () => void) {
+  afterUnlock = then ?? null;
+  $<HTMLInputElement>("unlock-key").value = "";
+  $("unlock-status").textContent = "";
+  $<HTMLDialogElement>("dlg-unlock").showModal();
+}
+
+async function unlock() {
+  const key = $<HTMLInputElement>("unlock-key").value;
+  const status = $("unlock-status");
+  const button = $<HTMLButtonElement>("btn-do-unlock");
+  button.disabled = true;
+  status.textContent = "Checking the key…";
+  try {
+    license = await api.activateLicense(key);
+  } catch (e) {
+    status.textContent = String(e);
+    return;
+  } finally {
+    button.disabled = false;
+  }
+  renderPublish();
+  $<HTMLDialogElement>("dlg-unlock").close();
+  toast("Publish unlocked. Thank you!");
+  const then = afterUnlock;
+  afterUnlock = null;
+  then?.();
+}
+
+async function removeLicense() {
+  try {
+    await api.deactivateLicense();
+  } catch (e) {
+    return fail(e);
+  }
+  license = null;
+  renderPublish();
+  toast("Publish removed from this computer.");
+}
+
 async function runExport() {
   const book = currentBook();
   if (!book) return toast("Open a manuscript or a note to export.");
@@ -1757,6 +1814,7 @@ async function runExport() {
   settings.author = $<HTMLInputElement>("export-author").value.trim();
   book.author = settings.author;
   api.saveSettings(settings).catch(fail);
+  if ((format === "epub" || format === "mp3") && !license) return openUnlock(() => runExport());
   const progress = $("export-progress");
   const button = $<HTMLButtonElement>("btn-do-export");
   button.disabled = true;
@@ -2662,6 +2720,14 @@ function wire() {
     dlgExport.showModal();
   };
   $("btn-do-export").onclick = () => runExport();
+  $("btn-buy-publish").onclick = () => api.openHelp("buy").catch(fail);
+  $("btn-do-unlock").onclick = () => unlock();
+  $("unlock-key").onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      unlock();
+    }
+  };
   dlgExport.onclose = () => (exportCancelled = true);
 
   // Pronunciations
@@ -2828,8 +2894,10 @@ function wireThemePicker() {
 
 async function main() {
   settings = await api.getSettings();
+  license = await api.licenseStatus().catch(() => null);
   applyTheme(settings);
   wire();
+  renderPublish();
   // Before an update installs: write pending edits, and keep a version if history is on.
   initUpdater(async (version) => {
     await flushSaves();

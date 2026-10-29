@@ -80,6 +80,8 @@ fn main() {
                 Ok(Value::Null)
             }
             "open_demo" | "new_book_folder" => Ok(json!(vault)),
+            // The preview never holds a Publish key.
+            "license_status" => Ok(Value::Null),
             _ => call(&vault, &cmd, &args),
         };
         let _ = match result {
