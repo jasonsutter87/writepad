@@ -54,6 +54,14 @@ fn main() {
         let mut body = String::new();
         let _ = req.as_reader().read_to_string(&mut body);
         let args: Value = serde_json::from_str(&body).unwrap_or(Value::Null);
+        // Pictures come back as bytes, as the app's command does.
+        if cmd == "read_image" {
+            let _ = match vault::read_image(&vault, args["path"].as_str().unwrap_or_default()) {
+                Ok(bytes) => req.respond(tiny_http::Response::from_data(bytes)),
+                Err(e) => req.respond(reply(422, json!(e))),
+            };
+            continue;
+        }
         let result = match cmd.as_str() {
             "__reset" if sandbox => reset(&demo, &vault).map(|_| {
                 settings = default_settings(&vault);
