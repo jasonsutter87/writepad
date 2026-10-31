@@ -144,27 +144,6 @@ fn list_manuscripts(state: State<AppState>) -> Result<Vec<ManuscriptInfo>, Strin
     Ok(manuscript::list(&state.vault()?))
 }
 
-/// Copy a picture chosen on disk into the vault's attachments folder.
-#[tauri::command]
-fn import_image(state: State<AppState>, path: String) -> Result<String, String> {
-    vault::import_image(&state.vault()?, std::path::Path::new(&path))
-}
-
-/// Save a pasted or dropped picture: the raw bytes are the body, its file name an `x-name` header.
-#[tauri::command]
-fn save_image(state: State<AppState>, request: tauri::ipc::Request<'_>) -> Result<String, String> {
-    let tauri::ipc::InvokeBody::Raw(data) = request.body() else {
-        return Err("Expected the image's bytes.".into());
-    };
-    let name = request.headers().get("x-name").and_then(|v| v.to_str().ok()).unwrap_or("image.png");
-    vault::save_image(&state.vault()?, name, data)
-}
-
-#[tauri::command]
-fn read_image(state: State<AppState>, path: String) -> Result<Response, String> {
-    vault::read_image(&state.vault()?, &path).map(Response::new)
-}
-
 #[tauri::command]
 fn load_manuscript(state: State<AppState>, id: String) -> Result<Manuscript, String> {
     manuscript::load(&state.vault()?, &id)

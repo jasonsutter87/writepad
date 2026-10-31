@@ -7,7 +7,8 @@
 # Functions live in netlify/functions (contact form relay and its guard).
 # They need FORM_RELAY_SECRET and NETLIFY_API_TOKEN set in the Netlify UI.
 
-[context.production.environment]
+# All contexts: deploy previews failed with "hugo: not found" when this was production-only.
+[build.environment]
   HUGO_VERSION = "0.147.4"
   NODE_VERSION = "20"
 
