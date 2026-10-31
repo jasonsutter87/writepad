@@ -28,23 +28,107 @@ class GhostWidget extends WidgetType {
   }
 }
 
-const setOnion = StateEffect.define<DiffOp[] | null>();
-const insertMark = Decoration.mark({ class: "wp-ins" });
+/** One place where two versions differ: `theirs` (the compared version's words) became `mine`. */
+export interface Hunk {
+  from: number;
+  to: number;
+  theirs: string;
+  mine: string;
+  /** Stable enough to remember a "keep mine" across re-diffs: the change plus the words before it. */
+  key: string;
+}
 
-function onionDecorations(ops: DiffOp[] | null, docLength: number): DecorationSet {
-  if (!ops) return Decoration.none;
-  const ranges: Range<Decoration>[] = [];
+/** Group a diff's runs of deletes and inserts into hunks, positioned in the new text. */
+export function hunks(ops: DiffOp[]): Hunk[] {
+  const out: Hunk[] = [];
   let pos = 0;
+  let before = "";
+  let cur: Hunk | null = null;
   for (const op of ops) {
-    if (op.tag === "delete") {
-      ranges.push(Decoration.widget({ widget: new GhostWidget(op.text), side: -1 }).range(pos));
+    if (op.tag === "equal") {
+      if (cur) out.push(cur), (cur = null);
+      before = op.text.slice(-40);
+      pos += op.text.length;
       continue;
     }
-    if (op.tag === "insert" && op.text.trim()) ranges.push(insertMark.range(pos, pos + op.text.length));
-    pos += op.text.length;
+    cur ??= { from: pos, to: pos, theirs: "", mine: "", key: "" };
+    if (op.tag === "delete") cur.theirs += op.text;
+    else (cur.mine += op.text), (pos += op.text.length), (cur.to = pos);
+    cur.key = `${before}\u0001${cur.theirs}\u0001${cur.mine}`;
   }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/** A hunk worth a decision: one that changes words, not only spacing. */
+export const visible = (h: Hunk) => !!(h.theirs + h.mine).trim();
+
+/** Merge mode: each hunk gets buttons to take the other version's words or keep these. */
+export interface Pick {
+  kept: Set<string>;
+  onKeep: (key: string) => void;
+}
+
+/** "Use theirs" / "Keep mine", at the end of a hunk. */
+class PickWidget extends WidgetType {
+  constructor(readonly hunk: Hunk, readonly pick: Pick) {
+    super();
+  }
+  eq(other: PickWidget) {
+    return other.hunk.key === this.hunk.key;
+  }
+  toDOM(view: EditorView) {
+    const box = document.createElement("span");
+    box.className = "wp-pick";
+    box.contentEditable = "false";
+    const { theirs, mine } = this.hunk;
+    const button = (label: string, title: string, run: () => void) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      b.title = title;
+      b.onmousedown = (e) => e.preventDefault();
+      b.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        run();
+      };
+      box.append(b);
+    };
+    const short = (s: string) => {
+      const t = s.trim().replace(/\s+/g, " ");
+      return t.length > 60 ? `${t.slice(0, 57)}…` : t;
+    };
+    button("←", theirs.trim() ? `Use “${short(theirs)}”` : `Cut “${short(mine)}”`, () => {
+      // The hunk ends where this widget sits; the text before it must still be `mine`.
+      const end = view.posAtDOM(box);
+      const from = end - mine.length;
+      if (from < 0 || view.state.sliceDoc(from, end) !== mine) return;
+      view.dispatch({ changes: { from, to: end, insert: theirs }, userEvent: "input.merge" });
+    });
+    button("✓", mine.trim() ? `Keep “${short(mine)}”` : `Leave “${short(theirs)}” out`, () => this.pick.onKeep(this.hunk.key));
+    return box;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+const setOnion = StateEffect.define<{ ops: DiffOp[] | null; pick: Pick | null }>();
+const insertMark = Decoration.mark({ class: "wp-ins" });
+
+function onionDecorations(ops: DiffOp[] | null, pick: Pick | null, docLength: number): DecorationSet {
+  if (!ops) return Decoration.none;
   // A diff computed against older text than what's on screen: drop it, a fresh one is coming.
-  if (pos !== docLength) return Decoration.none;
+  const length = ops.reduce((n, o) => n + (o.tag === "delete" ? 0 : o.text.length), 0);
+  if (length !== docLength) return Decoration.none;
+  const ranges: Range<Decoration>[] = [];
+  for (const h of hunks(ops)) {
+    if (pick?.kept.has(h.key)) continue;
+    if (h.theirs) ranges.push(Decoration.widget({ widget: new GhostWidget(h.theirs), side: -1 }).range(h.from));
+    if (h.mine.trim()) ranges.push(insertMark.range(h.from, h.to));
+    if (pick && visible(h)) ranges.push(Decoration.widget({ widget: new PickWidget(h, pick), side: 1 }).range(h.to));
+  }
   return Decoration.set(ranges, true);
 }
 
@@ -52,7 +136,7 @@ const onionField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(deco, tr) {
     deco = deco.map(tr.changes);
-    for (const e of tr.effects) if (e.is(setOnion)) deco = onionDecorations(e.value, tr.state.doc.length);
+    for (const e of tr.effects) if (e.is(setOnion)) deco = onionDecorations(e.value.ops, e.value.pick, tr.state.doc.length);
     return deco;
   },
   provide: (f) => EditorView.decorations.from(f),
@@ -558,8 +642,9 @@ export class Editor {
     this.view.focus();
   }
 
-  setOnion(ops: DiffOp[] | null) {
-    this.view.dispatch({ effects: setOnion.of(ops) });
+  /** Overlay a diff; with `pick`, each difference gets merge buttons. */
+  setOnion(ops: DiffOp[] | null, pick: Pick | null = null) {
+    this.view.dispatch({ effects: setOnion.of({ ops, pick }) });
   }
 
   setSpeaking(range: { from: number; to: number } | null) {

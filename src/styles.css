@@ -220,6 +220,13 @@ body:not(.has-ms) .for-ms { display: none; }
 .chip.viewing { border-color: var(--ink); font-weight: 600; }
 .chip.live::before { content: "★ "; color: var(--accent); }
 .chip.compare { border-style: dashed; border-color: var(--ghost-ink); }
+.chip.merging::after { content: " ⇄"; color: var(--accent); }
+.merge-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 8px; padding: 6px 10px; border: 1px solid var(--accent); border-radius: 8px; font-size: 12px; }
+.merge-bar[hidden] { display: none; }
+.merge-bar button { font-size: 12px; padding: 3px 10px; }
+.merge-status { color: var(--muted); margin-right: auto; }
+.merge-pick { display: inline-flex; align-items: center; gap: 4px; }
+body:not([data-mode="block"]) .merge-bar { display: none; }
 .chip-edit { border-radius: 999px; padding: 3px 11px; font-size: 12px; width: 140px; }
 
 #editor { flex: 1; min-height: 0; --ghost: 0.6; }
@@ -248,6 +255,21 @@ body[data-mode="none"] #editor, body[data-mode="none"] .doc-head { display: none
   font-style: italic;
   white-space: pre-wrap;
 }
+
+/* merge buttons on each difference */
+.wp-pick { display: inline-flex; gap: 2px; margin: 0 3px; vertical-align: 1px; }
+.wp-pick button {
+  font: 600 11px/1 var(--ui, system-ui);
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--ghost-ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  opacity: 0.55;
+}
+.wp-pick button:hover { opacity: 1; border-color: var(--accent); color: var(--accent); }
+body.focus #editor .wp-pick { display: none; }
 
 /* narration */
 .wp-speaking { background: var(--speak); border-radius: 3px; box-shadow: 0 0 0 2px var(--speak); }

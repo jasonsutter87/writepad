@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { api, type AudioSegment, type Block, type Book, type Cadence, type Comment, type CustomTheme, type Cut, type Entity, type LibraryReport, type ScriptSummary, type HistoryEntry, type Lexicon, type License, type Manuscript, type NoteEntry, type Prop, type Target, type Settings, type ThemeMode, type Variant, type WorldSuggestion, type WorldSuggestions } from "./api";
 import { applyTheme, contrast, PRESETS } from "./theme";
-import { Editor, type ViewMode } from "./editor";
+import { Editor, hunks, visible, type ViewMode } from "./editor";
 import { Narrator, type Segment } from "./narrator";
 import { sentences, speakable } from "./sentences";
 import { KINDS, renderGraph, renderTimeline, stopGraph, swatch } from "./world";
@@ -25,6 +25,12 @@ let compareId: string | null = null;
 /** A past snapshot to onion-skin against, instead of another version. */
 let compareSnap: { label: string; text: string } | null = null;
 let ghost = 60;
+/**
+ * A merge in progress: `take` is a fresh version, built by picking words from
+ * the versions it's compared with. `from` is every version picked from so far
+ * (they're offered for deletion at the end); `kept` remembers "keep mine" choices.
+ */
+let merge: { blockId: string; take: string; from: string[]; kept: Set<string> } | null = null;
 let lexicon: Lexicon = {};
 let notes: NoteEntry[] = [];
 let voices: string[] = [];
@@ -171,6 +177,7 @@ function applyMs(m: Manuscript) {
   }
   ms = m;
   if (compareId && !compareVariant()) compareId = null;
+  if (merge && !m.blocks.some((b) => b.variants.some((v) => v.id === merge!.take))) merge = null;
   renderOutline();
   renderCuts();
   renderProgress();
@@ -539,23 +546,128 @@ let diffSeq = 0;
 const refreshDiff = debounce(async () => {
   const a = compareSource();
   const seq = ++diffSeq;
-  if (!a || ghost === 0 || !doc) {
+  const m = merging();
+  // Merging needs the differences on screen, whatever the Ghost slider says.
+  if (!a || (ghost === 0 && !m) || !doc) {
     editor.setOnion(null);
     $("diff-stats").textContent = "";
+    renderMergeBar(null);
     return;
   }
   const text = editor.text;
   try {
     const ops = await api.diffWords(a.text, text);
     if (seq !== diffSeq || editor.text !== text) return;
-    editor.setOnion(ops);
+    editor.setOnion(ops, m && { kept: m.kept, onKeep: keepMine });
     const added = ops.filter((o) => o.tag === "insert").reduce((n, o) => n + words(o.text), 0);
     const cut = ops.filter((o) => o.tag === "delete").reduce((n, o) => n + words(o.text), 0);
     $("diff-stats").textContent = added || cut ? `+${added} words, −${cut} words vs ${a.label}` : `Same as ${a.label}`;
+    renderMergeBar(m ? hunks(ops).filter((h) => visible(h) && !m.kept.has(h.key)).length : null);
   } catch (e) {
     fail(e);
   }
 }, 200);
+
+// ---------- merging versions ----------
+
+/** The merge, if it's the version on screen and there's another version to pick from. */
+function merging() {
+  const d = doc;
+  if (!merge || d?.kind !== "block" || d.variantId !== merge.take || compareSnap || !compareVariant()) return null;
+  return merge;
+}
+
+function keepMine(key: string) {
+  merge?.kept.add(key);
+  refreshDiff();
+  refreshDiff.flush();
+}
+
+/** Start a merge: a new version, copied from this one, picking from the one it's compared with. */
+async function startMerge(block: Block, base: Variant) {
+  const others = block.variants.filter((v) => v.id !== base.id);
+  const source = compareVariant() ?? others[others.length - 1];
+  if (!source) return;
+  const added = await addTakeAfter(block, base, `${base.label} + ${source.label}`, editor.text, source.id);
+  if (!added) return;
+  merge = { blockId: block.id, take: added.id, from: [base.id, source.id], kept: new Set() };
+  renderVariants();
+  refreshDiff();
+  refreshDiff.flush();
+  toast(`Merging: ← takes words from “${source.label}”, ✓ keeps these. Switch Compare with to pick from another version.`);
+}
+
+/** The strip above the text while merging: what's left, and how to finish. `left` is null when not merging. */
+function renderMergeBar(left: number | null) {
+  const bar = $("merge-bar");
+  const m = merging();
+  const block = currentBlock();
+  const source = compareVariant();
+  if (left === null || !m || !block || !source) {
+    bar.hidden = true;
+    bar.replaceChildren();
+    return;
+  }
+  bar.hidden = false;
+  const status = left ? `${left} difference${left === 1 ? "" : "s"} left with “${source.label}”` : `Nothing left to pick from “${source.label}”`;
+  const finish = el("button", { type: "button", className: "primary", textContent: "Finish merge…", title: "Make this version live and tidy up the old ones" });
+  const stop = el("button", { type: "button", className: "ghost", textContent: "Stop merging", title: "Keep this version as it is and hide the merge buttons" });
+  stop.onclick = () => {
+    merge = null;
+    renderVariants();
+    refreshDiff();
+    refreshDiff.flush();
+  };
+  finish.onclick = () => renderFinish(block, m);
+  bar.replaceChildren(el("span", { className: "merge-status", textContent: `⇄ Merging · ${status}` }), finish, stop);
+}
+
+/** Finishing: make the merge live, and delete the versions ticked here. */
+function renderFinish(block: Block, m: NonNullable<typeof merge>) {
+  const bar = $("merge-bar");
+  const merged = block.variants.find((v) => v.id === m.take);
+  if (!merged) return;
+  const others = block.variants.filter((v) => v.id !== m.take);
+  const boxes = others.map((v) => {
+    const input = el("input", { type: "checkbox", checked: m.from.includes(v.id) });
+    input.dataset.take = v.id;
+    return el("label", { className: "merge-pick" }, input, ` ${v.author ? "🤖 " : ""}${v.label}${v.id === block.live ? " ★" : ""}`);
+  });
+  const go = el("button", { type: "button", className: "primary", textContent: `★ Make “${merged.label}” live` });
+  const back = el("button", { type: "button", className: "ghost", textContent: "Back" });
+  back.onclick = () => (refreshDiff(), refreshDiff.flush());
+  go.onclick = async () => {
+    const doomed = boxes.map((b) => b.querySelector("input")!).filter((i) => i.checked).map((i) => i.dataset.take!);
+    await finishMerge(block, merged, doomed);
+  };
+  bar.replaceChildren(el("span", { className: "merge-status", textContent: "Then delete:" }), ...boxes, go, back);
+}
+
+async function finishMerge(block: Block, merged: Variant, doomed: string[]) {
+  if (!ms) return;
+  const msId = ms.id;
+  const wasLive = block.live;
+  await flushSaves();
+  if (!(await op(api.setLive(msId, merged.id)))) return;
+  const deleted: string[] = [];
+  for (const id of doomed) {
+    if (!(await op(api.deleteTake(msId, id)))) break;
+    deleted.push(id);
+  }
+  merge = null;
+  compareId = null;
+  openBlock(block.id, merged.id);
+  const n = deleted.length;
+  toast(`“${merged.label}” is live${n ? `; deleted ${n} old version${n === 1 ? "" : "s"}` : ""}.`, false, {
+    label: "Undo",
+    run: async () => {
+      for (const id of [...deleted].reverse()) if (!(await op(api.restoreTake(msId, id)))) return;
+      if (ms?.blocks.find((b) => b.id === block.id)?.variants.some((v) => v.id === wasLive)) await op(api.setLive(msId, wasLive));
+      if (ms?.id === msId) openBlock(block.id, merged.id);
+      toast("Put the old versions back.");
+    },
+  });
+}
 
 function setGhost(value: number) {
   ghost = value;
@@ -909,7 +1021,7 @@ function renderVariants() {
   for (const v of block.variants) {
     const chip = el("button", {
       type: "button",
-      className: `chip${v.id === viewing.id ? " viewing" : ""}${v.id === block.live ? " live" : ""}${v.id === compareId ? " compare" : ""}`,
+      className: `chip${v.id === viewing.id ? " viewing" : ""}${v.id === block.live ? " live" : ""}${v.id === compareId ? " compare" : ""}${v.id === merge?.take ? " merging" : ""}`,
       textContent: v.author ? `🤖 ${v.label}` : v.label,
       title: `${v.author ? `Written by ${v.author}. ` : ""}${v.id === block.live ? "Live in the current cut. " : ""}Click to edit, double-click to rename.`,
     });
@@ -920,6 +1032,11 @@ function renderVariants() {
   const fork = el("button", { type: "button", className: "ghost", textContent: "+ Fork", title: "Copy this version to try something different" });
   fork.onclick = () => here() && addTakeAfter(block, viewing, `take ${block.variants.length + 1}`, editor.text);
   box.append(fork);
+  if (block.variants.length > 1 && merge?.take !== viewing.id) {
+    const mergeBtn = el("button", { type: "button", className: "ghost", textContent: "⇄ Merge", title: "Make a new version that takes some words from another version and keeps the rest of this one" });
+    mergeBtn.onclick = () => here() && startMerge(block, viewing);
+    box.append(mergeBtn);
+  }
   if (viewing.id !== block.live) {
     const live = el("button", { type: "button", className: "ghost", textContent: "★ Make live", title: "Use this version in the current cut" });
     live.onclick = () => here() && op(api.setLive(ms!.id, viewing.id));
@@ -948,17 +1065,18 @@ function renderVariants() {
   }
 }
 
-/** Add a take right after `after`, open it, and compare it against `after`. */
-async function addTakeAfter(block: Block, after: Variant, label: string, text: string) {
-  if (!ms) return;
+/** Add a take right after `after`, open it, and compare it against `after` (or `compare`). */
+async function addTakeAfter(block: Block, after: Variant, label: string, text: string, compare = after.id) {
+  if (!ms) return null;
   await flushSaves();
   const before = new Set(block.variants.map((v) => v.id));
   const m = await op(api.addTake(ms.id, block.id, after.id, label, text));
   const added = m?.blocks.find((b) => b.id === block.id)?.variants.find((v) => !before.has(v.id));
-  if (!added) return;
-  compareId = after.id;
+  if (!added) return null;
+  compareId = compare;
   openBlock(block.id, added.id);
   editor.focus();
+  return added;
 }
 
 function renameVariant(chip: HTMLElement, v: Variant) {
@@ -2650,6 +2768,7 @@ function wire() {
     if (value === "snap") return;
     compareSnap = null;
     compareId = value || null;
+    if (merge && compareId && doc?.kind === "block" && doc.variantId === merge.take && !merge.from.includes(compareId)) merge.from.push(compareId);
     renderHistory();
     renderVariants();
     renderCompare();
