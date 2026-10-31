@@ -1,6 +1,6 @@
 ---
 title: "Versions of a page"
-description: "Fork a page to try something new, keep every version side by side, and choose which one goes in the book."
+description: "Fork a page to try something new, keep every version side by side, merge the best of them, and choose which one goes in the book."
 group: "Write and revise"
 weight: 20
 ---
@@ -20,6 +20,18 @@ Click **+ Fork** (*Copy this version to try something different*). WRITEpad copi
 - The version marked **★** is **live**: it's the one that goes in the book, the export and the word count. Open another version and click **★ Make live** to use it instead.
 
 Versions written by an AI agent through WRITEpad's agent tools are marked with a robot and the agent's name. An agent can only add its own versions. Making one live is always your call.
+
+## Merge versions
+
+Like part of one version and part of another? Merge them, a few words at a time.
+
+1. Open the version you want to start from, and pick the other one under **Compare with** in the [Onion skin](/docs/onion-skin/) panel.
+2. Click **⇄ Merge**. WRITEpad makes a new version (named for both, like "Jacobs 1902 + tighter opening") and opens it. Neither original changes.
+3. Every difference gets two small buttons: **←** swaps in the other version's words there, and **✓** keeps the words you have. The bar above the text counts the differences left. **Undo** takes back a pick.
+4. To pull words from a third version too, switch **Compare with** to it and keep picking.
+5. Click **Finish merge…**. Tick the old versions you're done with, then click **★ Make … live**. The merged version goes in the book and the ticked ones are deleted. **Undo** in the message at the bottom puts them back.
+
+**Stop merging** hides the buttons and keeps the merged version as it is.
 
 ## Delete a version
 
