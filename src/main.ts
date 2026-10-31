@@ -1005,6 +1005,9 @@ async function moveBlock(id: string, targetId: string, after: boolean) {
   op(api.setOrder(ms.id, order));
 }
 
+/** Last click on a version chip, to spot a double-click across re-renders. */
+let lastChipClick = { id: "", at: 0 };
+
 function renderVariants() {
   const box = $("variants");
   box.replaceChildren();
@@ -1025,8 +1028,18 @@ function renderVariants() {
       textContent: v.author ? `🤖 ${v.label}` : v.label,
       title: `${v.author ? `Written by ${v.author}. ` : ""}${v.id === block.live ? "Live in the current cut. " : ""}Click to edit, double-click to rename.`,
     });
-    chip.onclick = () => openBlock(block.id, v.id);
-    chip.ondblclick = () => renameVariant(chip, v);
+    // The first click re-renders the chips, so a native dblclick never lands
+    // on the same element. Count two quick clicks on one take ourselves.
+    chip.onclick = () => {
+      const t = Date.now();
+      if (lastChipClick.id === v.id && t - lastChipClick.at < 450) {
+        lastChipClick = { id: "", at: 0 };
+        renameVariant(chip, v);
+        return;
+      }
+      lastChipClick = { id: v.id, at: t };
+      if (v.id !== viewing.id) openBlock(block.id, v.id);
+    };
     box.append(chip);
   }
   const fork = el("button", { type: "button", className: "ghost", textContent: "+ Fork", title: "Copy this version to try something different" });
