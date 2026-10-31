@@ -3,7 +3,7 @@ title: 'Privacy'
 PageTitle: 'Privacy Policy · WRITEpad'
 description: 'What WRITEpad and this website collect: almost nothing, and never your writing.'
 eyebrow: Policies
-updated: 'October 24, 2026'
+updated: 'October 31, 2026'
 priority: 0.1
 ---
 
@@ -29,8 +29,9 @@ The app connects to the internet only when you ask it to:
 
 ## This website
 
-We don't run analytics or set cookies. To show the site, a few services see your IP
-address the way any web server does:
+This website sets no cookies. We count visits with Zero Trust Analytics (ztas.io). It sets no cookies, stores nothing on your device and does not store your IP address. For each page view it records the page, the site that sent you here, your browser, device type and operating system, an approximate location (country, region and city), and a one-way code that changes every day so a visit isn't counted twice.
+
+To show the site, a few services see your IP address the way any web server does:
 
 - **Netlify** hosts the site.
 - **Google Fonts** serves the typefaces.
