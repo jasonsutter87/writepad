@@ -445,7 +445,7 @@ mod tests {
         let path = std::env::temp_dir().join(format!("wp-test-{}.epub", std::process::id()));
         epub(&book(), &path).unwrap();
         let mut z = zip::ZipArchive::new(fs::File::open(&path).unwrap()).unwrap();
-        assert_eq!(z.by_index(0).unwrap().name(), "mimetype");
+        assert_eq!(z.by_index(0).unwrap().name().unwrap(), "mimetype");
         let mut ch = String::new();
         std::io::Read::read_to_string(&mut z.by_name("OEBPS/ch002.xhtml").unwrap(), &mut ch).unwrap();
         assert!(ch.contains("<p><em>Clear. Proceed.</em></p>"), "{ch}");
