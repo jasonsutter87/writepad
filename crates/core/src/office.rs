@@ -459,7 +459,7 @@ mod tests {
             if ext == "docx" { docx(&book(), &path).unwrap() } else { odt(&book(), &path).unwrap() }
             let mut z = zip::ZipArchive::new(fs::File::open(&path).unwrap()).unwrap();
             if ext == "odt" {
-                assert_eq!(z.by_index(0).unwrap().name(), "mimetype");
+                assert_eq!(z.by_index(0).unwrap().name().unwrap(), "mimetype");
             }
             let mut text = String::new();
             std::io::Read::read_to_string(&mut z.by_name(part).unwrap(), &mut text).unwrap();
