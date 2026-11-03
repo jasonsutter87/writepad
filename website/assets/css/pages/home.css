@@ -478,6 +478,22 @@
 }
 .download-card .muted {
   flex-grow: 1;
+  margin-bottom: 1.25rem;
+}
+
+.download-help {
+  display: grid;
+  gap: 0 3rem;
+  margin-top: 1rem;
+}
+@media (min-width: 768px) {
+  .download-help {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.download-help .prose-page {
+  max-width: none;
+  padding-bottom: 1rem;
 }
 
 .contact-form .field {
