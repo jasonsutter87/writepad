@@ -2,7 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   {{ range sort .Data.Pages ".Params.priority" "desc" }}
-    {{ if and (not .Params.private) (ge .Params.priority 0.1) }}
+    {{- /* A page can set `priority`; otherwise it gets one from its place on the site, so a new
+           page never drops out of the sitemap. noIndex, private and taxonomy pages stay out. */ -}}
+    {{ $priority := .Params.priority }}
+    {{ if not (isset .Params "priority") }}
+      {{ $priority = cond .IsHome 1.0 (cond (eq .Kind "section") 0.8 (cond (eq .Section "blog") 0.7 (cond (in (slice "docs" "help") .Section) 0.6 0.5))) }}
+    {{ end }}
+    {{ if and (not .Params.private) (not .Params.noIndex) (not (in (slice "taxonomy" "term") .Kind)) (ge $priority 0.1) }}
       <url>
         <loc>{{ .Permalink }}</loc>
 
@@ -14,7 +20,7 @@
           <changefreq>{{ . }}</changefreq>
         {{ end }}
 
-        <priority>{{ or .Params.priority 0 }}</priority>
+        <priority>{{ $priority }}</priority>
 
         {{ if .IsTranslated }}
           {{ range .Translations }}
