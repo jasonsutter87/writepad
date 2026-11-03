@@ -1,6 +1,7 @@
 # writepad.app belongs to someone else; this is WRITEpad's address until it has its own domain
 # (also SITE in src-tauri/src/lib.rs and src/devbridge.ts).
 baseURL = 'https://writepad-app.netlify.app/'
+enableRobotsTXT = true
 languageCode = 'en-us'
 title = 'WRITEpad'
 disableKinds = ['taxonomy', 'term']
