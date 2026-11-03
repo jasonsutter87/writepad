@@ -1,11 +1,247 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title></title>
-    <link>//localhost:1313/</link>
-    <description>Recent content on </description>
-    <generator>Hugo</generator>
-    <language>en</language>
-    <atom:link href="//localhost:1313/index.xml" rel="self" type="application/rss+xml" />
-  </channel>
-</rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>A writing desk for working a draft over on WRITEpad</title><link>https://writepad-app.netlify.app/</link><description>Recent content in A writing desk for working a draft over on WRITEpad</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Mon, 26 Oct 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://writepad-app.netlify.app/index.xml" rel="self" type="application/rss+xml"/><item><title>Export</title><link>https://writepad-app.netlify.app/docs/export/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/export/</guid><description>&lt;p>&lt;strong>Export&lt;/strong> (top bar) writes out the manuscript you have open, as it stands: its pages in outline order, the ★ live version of each, and none of the pages &lt;a href="https://writepad-app.netlify.app/docs/cuts/">left out of the cut&lt;/a>. With a note open instead, it exports the note.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/export.jpg" alt="The Export dialog with every format" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="formats">Formats&lt;/h2>
+&lt;table>
+ &lt;thead>
+ &lt;tr>
+ &lt;th>Format&lt;/th>
+ &lt;th>Good for&lt;/th>
+ &lt;/tr>
+ &lt;/thead>
+ &lt;tbody>
+ &lt;tr>
+ &lt;td>&lt;strong>Word&lt;/strong> (.docx)&lt;/td>
+ &lt;td>Word, Pages and Google Docs; sending to an editor or agent&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>PDF&lt;/strong>&lt;/td>
+ &lt;td>Print-ready, 5.5 × 8.5 inch pages&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>EPUB&lt;/strong>&lt;/td>
+ &lt;td>E-readers&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>OpenDocument&lt;/strong> (.odt)&lt;/td>
+ &lt;td>LibreOffice&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>Rich Text&lt;/strong> (.rtf)&lt;/td>
+ &lt;td>Opens almost anywhere&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>Web page&lt;/strong> (.html)&lt;/td>
+ &lt;td>Reading in a browser or posting online&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>Markdown&lt;/strong>&lt;/td>
+ &lt;td>Other writing tools&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>Plain text&lt;/strong>&lt;/td>
+ &lt;td>Anything&lt;/td>
+ &lt;/tr>
+ &lt;tr>
+ &lt;td>&lt;strong>MP3 audiobook&lt;/strong>&lt;/td>
+ &lt;td>One narrated file per chapter; a screenplay is read by its cast&lt;/td>
+ &lt;/tr>
+ &lt;/tbody>
+&lt;/table>
+&lt;p>Word, OpenDocument and Rich Text files get a title page with your byline, and each chapter starts on a new page. &lt;a href="https://writepad-app.netlify.app/docs/page-properties/">Page properties&lt;/a> are never exported.&lt;/p></description></item><item><title>Listen and table reads</title><link>https://writepad-app.netlify.app/docs/listen/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/listen/</guid><description>&lt;p>Hearing a draft catches what reading it silently misses: clunky rhythm, repeated words, dialogue nobody would say. WRITEpad reads your work aloud with voices that run on your own computer. Nothing is sent anywhere to be read.&lt;/p>
+&lt;h2 id="listen">Listen&lt;/h2>
+&lt;p>Put the cursor where you want to start and click &lt;strong>▶ Listen&lt;/strong> (&lt;!-- raw HTML omitted -->⌘↵&lt;!-- raw HTML omitted -->), or select a passage to hear just that. The sentence being read lights up as it goes. &lt;!-- raw HTML omitted -->Esc&lt;!-- raw HTML omitted --> stops.&lt;/p></description></item><item><title>Pages and chapters</title><link>https://writepad-app.netlify.app/docs/pages-and-chapters/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/pages-and-chapters/</guid><description>&lt;p>A manuscript is made of &lt;strong>pages&lt;/strong>: chapters, scenes or sections, whatever suits the book. Open a manuscript from the &lt;strong>Manuscripts&lt;/strong> tab and its outline appears in the sidebar, one row per page in book order.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/outline.jpg" alt="The outline of The Monkey&amp;#39;s Paw in the sidebar" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;p>Each row shows the page&amp;rsquo;s title. If the page has more than one version, the row also shows how many, and which one is live, such as &lt;em>2 · Jacobs 1902&lt;/em>.&lt;/p></description></item><item><title>Your first vault</title><link>https://writepad-app.netlify.app/docs/your-first-vault/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/your-first-vault/</guid><description>&lt;p>WRITEpad keeps everything in a &lt;strong>vault&lt;/strong>: an ordinary folder on your computer. Notes are plain markdown files you could open in any editor, including Obsidian. Manuscripts, their versions and your settings for them live in a &lt;code>.writepad&lt;/code> folder inside it. Nothing is uploaded anywhere.&lt;/p>
+&lt;p>Shortcuts on these pages say &lt;!-- raw HTML omitted -->⌘&lt;!-- raw HTML omitted -->. On Windows, use &lt;!-- raw HTML omitted -->Ctrl&lt;!-- raw HTML omitted -->.&lt;/p></description></item><item><title>Your story world</title><link>https://writepad-app.netlify.app/docs/your-story-world/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/your-story-world/</guid><description>&lt;p>The &lt;strong>World&lt;/strong> tab keeps your story bible: characters, locations, relationships, things, and an overview of the world itself. Each entry is an ordinary markdown note in your vault (under &lt;code>world/&lt;/code>), so you can write as much or as little about it as you like.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/world.jpg" alt="The World tab listing characters and locations with a line about each" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="add-an-entry">Add an entry&lt;/h2>
+&lt;p>Each group on the &lt;strong>World&lt;/strong> tab (Characters, Locations and so on) has a &lt;strong>+&lt;/strong> button. Pick the &lt;strong>Type&lt;/strong>, give it a &lt;strong>Name&lt;/strong> and click &lt;strong>Create&lt;/strong>. The new note opens, ready for a description.&lt;/p></description></item><item><title>Library and targets</title><link>https://writepad-app.netlify.app/docs/library-and-targets/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/library-and-targets/</guid><description>&lt;p>The &lt;strong>Library&lt;/strong> measures published books so you can see how your draft compares: how long their chapters run, how long their sentences are, how much is dialogue, how chapters end. Blend the ones you admire into a &lt;strong>target&lt;/strong>, and WRITEpad measures every page you write against it.&lt;/p>
+&lt;p>Only the numbers are kept, never the books&amp;rsquo; text.&lt;/p>
+&lt;h2 id="add-books">Add books&lt;/h2>
+&lt;p>On the &lt;strong>Library&lt;/strong> tab, click &lt;strong>Add books…&lt;/strong> and pick EPUB files. Each one is measured and added to the list.&lt;/p></description></item><item><title>Settings and updates</title><link>https://writepad-app.netlify.app/docs/settings/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/settings/</guid><description>&lt;p>Click &lt;strong>Settings&lt;/strong> at the top right. Changes take effect when you click &lt;strong>Save&lt;/strong>.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/settings.jpg" alt="The Settings dialog" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="vault">Vault&lt;/h2>
+&lt;p>The folder WRITEpad works in. &lt;strong>Change…&lt;/strong> opens a different one. See &lt;a href="https://writepad-app.netlify.app/docs/your-first-vault/">Your first vault&lt;/a>.&lt;/p>
+&lt;h2 id="narration">Narration&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>Set up narration&lt;/strong> installs the voices (about 350 MB, needs Python 3.10 or newer).&lt;/li>
+&lt;li>&lt;strong>Voice for &lt;em>italic&lt;/em> lines&lt;/strong>: the second voice, for thoughts and other italics.&lt;/li>
+&lt;li>&lt;strong>Pause after paragraphs (seconds)&lt;/strong>.&lt;/li>
+&lt;/ul>
+&lt;p>If you already have Kokoro installed, point &lt;strong>Python with kokoro-onnx&lt;/strong> and &lt;strong>Kokoro model folder&lt;/strong> at it instead. See &lt;a href="https://writepad-app.netlify.app/docs/listen/">Listen and table reads&lt;/a>.&lt;/p></description></item><item><title>The writing desk at a glance</title><link>https://writepad-app.netlify.app/docs/the-writing-desk/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/the-writing-desk/</guid><description>&lt;p>With a manuscript open, WRITEpad has four parts.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/desk.jpg" alt="WRITEpad with The Monkey&amp;#39;s Paw open: sidebar, page and panels" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="the-top-bar">The top bar&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>The vault&amp;rsquo;s name&lt;/strong> (top left): click it to open a different vault. Beside it, &lt;strong>words today&lt;/strong> counts what you&amp;rsquo;ve written today across every page and note (cutting words counts against it).&lt;/li>
+&lt;li>&lt;strong>🎙 Dictate&lt;/strong>: talk and the words land at the cursor. See &lt;a href="https://writepad-app.netlify.app/docs/dictation/">Dictation&lt;/a>.&lt;/li>
+&lt;li>&lt;strong>▶ Listen&lt;/strong>: reads aloud from the cursor, or just the selection (&lt;!-- raw HTML omitted -->⌘↵&lt;!-- raw HTML omitted -->). &lt;!-- raw HTML omitted -->Esc&lt;!-- raw HTML omitted --> stops. Next to it are the narrator &lt;strong>voice&lt;/strong> and the &lt;strong>speed&lt;/strong>. See &lt;a href="https://writepad-app.netlify.app/docs/listen/">Listen and table reads&lt;/a>.&lt;/li>
+&lt;li>&lt;strong>Export&lt;/strong>: Word, PDF, EPUB and more. See &lt;a href="https://writepad-app.netlify.app/docs/export/">Export&lt;/a>.&lt;/li>
+&lt;li>&lt;strong>Settings&lt;/strong>: your vault, narration, theme, dictation and updates. See &lt;a href="https://writepad-app.netlify.app/docs/settings/">Settings&lt;/a>.&lt;/li>
+&lt;li>&lt;strong>?&lt;/strong>: opens the help page for what you&amp;rsquo;re looking at, in your browser. The &lt;strong>Help&lt;/strong> menu (&lt;!-- raw HTML omitted -->⌘?&lt;!-- raw HTML omitted -->) does the same, and has the blog and &lt;strong>Report a bug…&lt;/strong>.&lt;/li>
+&lt;/ul>
+&lt;p>Each panel on the right has a small &lt;strong>?&lt;/strong> beside its heading that opens the help page for that panel.&lt;/p></description></item><item><title>Timeline</title><link>https://writepad-app.netlify.app/docs/timeline/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/timeline/</guid><description>&lt;p>The &lt;strong>Timeline&lt;/strong> lists your story&amp;rsquo;s events in the order they &lt;strong>happen&lt;/strong>, which isn&amp;rsquo;t always the order you &lt;strong>tell&lt;/strong> them. Each event links to the scenes where the reader sees it, so flashbacks, cold opens and narrators who disagree are easy to spot.&lt;/p>
+&lt;p>Click &lt;strong>Timeline&lt;/strong> on the World tab.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/timeline.jpg" alt="The timeline list with events, scene chips and told-earlier flags" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="add-events">Add events&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>+ Event at the start&lt;/strong> adds the first event.&lt;/li>
+&lt;li>&lt;strong>+&lt;/strong> between two events adds one there.&lt;/li>
+&lt;li>From a page, &lt;strong>+ Event here&lt;/strong> (in &lt;em>In this scene&lt;/em>) adds an event linked to that page.&lt;/li>
+&lt;/ul>
+&lt;p>Give it a &lt;strong>Name&lt;/strong> and, if you like, a &lt;strong>When&lt;/strong> in story time (&amp;ldquo;the next morning&amp;rdquo;, &amp;ldquo;Fri Apr 26 2041, 8:14am&amp;rdquo;).&lt;/p></description></item><item><title>Versions of a page</title><link>https://writepad-app.netlify.app/docs/versions/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/versions/</guid><description>&lt;p>Every page can have several &lt;strong>versions&lt;/strong> (takes). Try a tighter opening, a different point of view or a new ending without losing what you had. The versions sit side by side above the text.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/versions.jpg" alt="Two versions of The visitor above the text, with &amp;#43; Fork and Delete" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="fork-a-version">Fork a version&lt;/h2>
+&lt;p>Click &lt;strong>+ Fork&lt;/strong> (&lt;em>Copy this version to try something different&lt;/em>). WRITEpad copies the version you&amp;rsquo;re looking at and opens the copy, compared against the original (see &lt;a href="https://writepad-app.netlify.app/docs/onion-skin/">Onion skin&lt;/a>). Rewrite the copy; the original stays exactly as it was.&lt;/p></description></item><item><title>Notes and links</title><link>https://writepad-app.netlify.app/docs/notes/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/notes/</guid><description>&lt;p>&lt;strong>Notes&lt;/strong> are plain markdown files in your vault: research, ideas, outlines, anything that isn&amp;rsquo;t the book itself. They work in any markdown editor, and the same folder can be an Obsidian vault at the same time.&lt;/p>
+&lt;h2 id="write-a-note">Write a note&lt;/h2>
+&lt;p>On the &lt;strong>Notes&lt;/strong> tab, click &lt;strong>New note&lt;/strong> and give it a &lt;strong>Name&lt;/strong>. A name with a slash, like &lt;code>ideas/Unit 12&lt;/code>, puts the note in a folder. It opens ready to type, and saves as you go.&lt;/p></description></item><item><title>Onion skin: compare versions</title><link>https://writepad-app.netlify.app/docs/onion-skin/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/onion-skin/</guid><description>&lt;p>&lt;strong>Onion skin&lt;/strong> lays one version of a page over the one you&amp;rsquo;re reading. Words you added are tinted. Words the other version had are drawn as faint ghosts, struck through, right where they were. You read the new version and see the old one underneath.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/onion-skin.jpg" alt="The visitor compared with its tighter opening: added words tinted, cut words as ghosts" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="compare-two-versions">Compare two versions&lt;/h2>
+&lt;p>Open a page with more than one version. In the &lt;strong>Onion skin&lt;/strong> panel on the right, pick a version under &lt;strong>Compare with&lt;/strong>.&lt;/p></description></item><item><title>Cuts</title><link>https://writepad-app.netlify.app/docs/cuts/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/cuts/</guid><description>&lt;p>A &lt;strong>cut&lt;/strong> is a named recipe for the whole book:&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>Which pages&lt;/strong> are in it.&lt;/li>
+&lt;li>&lt;strong>What order&lt;/strong> they go in.&lt;/li>
+&lt;li>&lt;strong>Which version&lt;/strong> (★ live take) of each page it uses.&lt;/li>
+&lt;/ol>
+&lt;p>You might keep a cut of the original draft, one for each revision pass, a shorter cut for a contest with a word limit, or one per narrator. Switching between them takes one click, and none of them ever deletes anything.&lt;/p></description></item><item><title>Comments</title><link>https://writepad-app.netlify.app/docs/comments/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/comments/</guid><description>&lt;p>&lt;strong>Comments&lt;/strong> are notes about the text that aren&amp;rsquo;t part of it: &amp;ldquo;is this the house&amp;rsquo;s name or the street&amp;rsquo;s?&amp;rdquo;, &amp;ldquo;cut this?&amp;rdquo;, &amp;ldquo;check the date&amp;rdquo;. They sit in the &lt;strong>Comments&lt;/strong> panel on the right, and the words they&amp;rsquo;re about are highlighted in the page. They&amp;rsquo;re never exported and never change your text.&lt;/p>
+&lt;h2 id="add-one">Add one&lt;/h2>
+&lt;p>Select some words, then click &lt;strong>+ Comment on selection&lt;/strong> (or press &lt;!-- raw HTML omitted -->⌘⌥M&lt;!-- raw HTML omitted -->). Type your note and press &lt;!-- raw HTML omitted -->Enter&lt;!-- raw HTML omitted -->. &lt;!-- raw HTML omitted -->Shift&lt;!-- raw HTML omitted -->+&lt;!-- raw HTML omitted -->Enter&lt;!-- raw HTML omitted --> starts a new line in the note; &lt;!-- raw HTML omitted -->Esc&lt;!-- raw HTML omitted --> cancels.&lt;/p></description></item><item><title>Page properties</title><link>https://writepad-app.netlify.app/docs/page-properties/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/page-properties/</guid><description>&lt;p>&lt;strong>Properties&lt;/strong> are your own notes about a page, as name and value pairs: point of view, setting, a date, a status, the source verses for a retelling. They sit under the page title and are never exported with the book.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/properties.jpg" alt="A page with POV and setting properties under its title" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="add-one">Add one&lt;/h2>
+&lt;p>Click &lt;strong>+ Property&lt;/strong> (&lt;em>Add to this page: verses, POV, setting, [[a note]]&lt;/em>). Type a name, press &lt;!-- raw HTML omitted -->Tab&lt;!-- raw HTML omitted -->, type the value and press &lt;!-- raw HTML omitted -->Enter&lt;!-- raw HTML omitted -->. Names you&amp;rsquo;ve used on other pages are suggested as you type, so the same field stays spelled the same way.&lt;/p></description></item><item><title>Search</title><link>https://writepad-app.netlify.app/docs/search/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/search/</guid><description>&lt;p>The search box at the top of the sidebar looks through the whole vault: every note, every version of every page (not just the live ones), and page &lt;a href="https://writepad-app.netlify.app/docs/page-properties/">properties&lt;/a>.&lt;/p>
+&lt;figure class="doc-shot">
+ &lt;img src="https://writepad-app.netlify.app/images/docs/search.jpg" alt="Search results for a phrase, with matches highlighted" loading="lazy" decoding="async">
+ 
+&lt;/figure>
+
+&lt;h2 id="search">Search&lt;/h2>
+&lt;p>Click the box, or press &lt;!-- raw HTML omitted -->⌘⇧F&lt;!-- raw HTML omitted -->, and type. Results appear as you type.&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Several words&lt;/strong> find places that have all of them.&lt;/li>
+&lt;li>Each result shows the page or note, where it is, and the matching text with your words highlighted.&lt;/li>
+&lt;li>Results with your words in the title, or the exact phrase, come first.&lt;/li>
+&lt;/ul>
+&lt;p>Click a result to open it, with the first match selected. &lt;!-- raw HTML omitted -->Enter&lt;!-- raw HTML omitted --> opens the top result. &lt;!-- raw HTML omitted -->Esc&lt;!-- raw HTML omitted --> clears the search.&lt;/p></description></item><item><title>History</title><link>https://writepad-app.netlify.app/docs/history/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/history/</guid><description>&lt;p>&lt;strong>History&lt;/strong> keeps snapshots of the whole vault: every note and every version of every page, as they were. You can compare a page with any snapshot, restore one page, or roll the whole vault back.&lt;/p>
+&lt;p>It uses git under the hood, so the history also works with any git tool. You don&amp;rsquo;t need to know git to use it.&lt;/p>
+&lt;h2 id="turn-it-on">Turn it on&lt;/h2>
+&lt;p>In the &lt;strong>History&lt;/strong> panel on the right, click &lt;strong>Turn on history&lt;/strong>. It&amp;rsquo;s off until you do, once per vault.&lt;/p></description></item><item><title>Screenplays</title><link>https://writepad-app.netlify.app/docs/screenplays/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/screenplays/</guid><description>&lt;p>WRITEpad writes screenplays as well as prose. A screenplay is a manuscript whose pages are scenes.&lt;/p>
+&lt;h2 id="start-one">Start one&lt;/h2>
+&lt;p>On the &lt;strong>Manuscripts&lt;/strong> tab, click &lt;strong>New…&lt;/strong>, pick &lt;strong>Screenplay&lt;/strong>, give it a title and click &lt;strong>Create&lt;/strong>.&lt;/p>
+&lt;h2 id="write">Write&lt;/h2>
+&lt;p>Type, and press &lt;!-- raw HTML omitted -->Tab&lt;!-- raw HTML omitted --> to change a line&amp;rsquo;s type: scene heading, action, character, dialogue and so on. The formatting bar reminds you: &lt;em>Screenplay · Tab changes a line&amp;rsquo;s type · ▶ Listen for a table read&lt;/em>.&lt;/p></description></item><item><title>Dictation</title><link>https://writepad-app.netlify.app/docs/dictation/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/docs/dictation/</guid><description>&lt;p>&lt;strong>🎙 Dictate&lt;/strong> turns speech into text at the cursor. Transcription runs on your own computer with Whisper.&lt;/p>
+&lt;h2 id="dictate">Dictate&lt;/h2>
+&lt;p>Open a page or a note and put the cursor where the words should go. Then either:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Hold Right ⌥&lt;/strong> (the Option key on the right; &lt;strong>Right Alt&lt;/strong> on Windows) and talk. Let go, and the text lands at the cursor.&lt;/li>
+&lt;li>&lt;strong>Tap&lt;/strong> it, or click &lt;strong>🎙 Dictate&lt;/strong>, to go hands-free: it keeps listening until you tap again.&lt;/li>
+&lt;/ul>
+&lt;p>The button shows &lt;strong>● Listening&lt;/strong> while it records and &lt;strong>… Writing&lt;/strong> while it transcribes. Pressing another key while holding Right ⌥ cancels.&lt;/p></description></item><item><title>How long should a chapter be? Measure the books you love</title><link>https://writepad-app.netlify.app/blog/how-long-should-a-chapter-be/</link><pubDate>Mon, 26 Oct 2026 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/blog/how-long-should-a-chapter-be/</guid><description>&lt;p>Ask &amp;ldquo;how long should a chapter be?&amp;rdquo; and you&amp;rsquo;ll get the same answer every time:
+somewhere between 2,000 and 5,000 words, unless it isn&amp;rsquo;t. That&amp;rsquo;s true, and it
+doesn&amp;rsquo;t help you decide anything.&lt;/p>
+&lt;p>A better question is: &lt;strong>how long are the chapters in the books yours will sit
+next to on the shelf?&lt;/strong> That you can measure.&lt;/p>
+&lt;h2 id="why-the-usual-advice-is-so-vague">Why the usual advice is so vague&lt;/h2>
+&lt;p>Chapter length is a pacing tool, not a rule. Short chapters speed a reader up.
+Each break is a small reward and an easy &amp;ldquo;one more&amp;rdquo;. Long chapters slow a reader
+down and let a scene breathe. Thrillers lean short. Literary fiction and epic
+fantasy often run long. Middle-grade novels run short because the reader is
+younger and the book is shorter.&lt;/p></description></item><item><title>How to keep multiple versions of a chapter (without chapter3-final-FINAL.docx)</title><link>https://writepad-app.netlify.app/blog/keep-multiple-versions-of-a-chapter/</link><pubDate>Mon, 26 Oct 2026 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/blog/keep-multiple-versions-of-a-chapter/</guid><description>&lt;p>Every writer who revises ends up with a folder like this:&lt;/p>
+&lt;pre tabindex="0">&lt;code>chapter3.docx
+chapter3-v2.docx
+chapter3-tighter.docx
+chapter3-final.docx
+chapter3-final-FINAL.docx
+chapter3-final-FINAL-use-this-one.docx
+&lt;/code>&lt;/pre>&lt;p>It happens because revision is experiment. You want to try the tighter
+opening &lt;em>without losing the old one&lt;/em>, in case the old one was better. The
+files are a way of keeping your nerve.&lt;/p>
+&lt;p>The trouble is that they&amp;rsquo;re blind. You can&amp;rsquo;t see what changed between v2 and
+&amp;ldquo;tighter&amp;rdquo;, you can&amp;rsquo;t put the tighter opening in the book and the old ending
+alongside it, and three months later you can&amp;rsquo;t remember which one you liked.&lt;/p></description></item><item><title>Read your writing aloud: what your ear catches that your eyes miss</title><link>https://writepad-app.netlify.app/blog/read-your-writing-aloud/</link><pubDate>Mon, 26 Oct 2026 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/blog/read-your-writing-aloud/</guid><description>&lt;p>Every editing guide says it: &lt;strong>read your work aloud.&lt;/strong> It&amp;rsquo;s the one piece of
+advice that every writer agrees on, and the one most of us skip, because it&amp;rsquo;s
+slow, it&amp;rsquo;s a little embarrassing, and our voice gives out by chapter four.&lt;/p>
+&lt;p>It&amp;rsquo;s worth finding a way to do it anyway. Here&amp;rsquo;s why it works, and how to get
+the benefit without reading 90,000 words out loud yourself.&lt;/p>
+&lt;h2 id="why-your-ear-catches-what-your-eyes-miss">Why your ear catches what your eyes miss&lt;/h2>
+&lt;p>When you reread your own writing silently, you read what you &lt;em>meant&lt;/em>, not what
+you &lt;em>wrote&lt;/em>. Your brain knows the sentence and fills it in. A missing &amp;ldquo;the&amp;rdquo;, a
+doubled word, a sentence that changed halfway through a revision: your eye
+slides right over them.&lt;/p></description></item><item><title>Story order vs. telling order: keeping a nonlinear timeline straight</title><link>https://writepad-app.netlify.app/blog/story-order-vs-telling-order/</link><pubDate>Mon, 26 Oct 2026 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/blog/story-order-vs-telling-order/</guid><description>&lt;p>Every story has two orders.&lt;/p>
+&lt;p>There&amp;rsquo;s the order things &lt;strong>happened&lt;/strong>: the soldier buys the paw in India, the
+Whites wish on it, the son dies at the factory, the knock comes at the door.
+And there&amp;rsquo;s the order you &lt;strong>tell&lt;/strong> them in. Maybe you open on the knock and
+reach back for the rest.&lt;/p>
+&lt;p>Narrative theory calls these &lt;em>fabula&lt;/em> (the story as it happened) and &lt;em>syuzhet&lt;/em>
+(the story as told). You don&amp;rsquo;t need the Russian to use the idea, but you do
+need to keep the two apart, because almost every continuity error in a
+nonlinear book comes from mixing them up.&lt;/p></description></item><item><title>Accessibility</title><link>https://writepad-app.netlify.app/accessibility-statement/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/accessibility-statement/</guid><description>&lt;p>We want WRITEpad and this website to be usable by everyone, and aim to meet the
+&lt;a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener">Web Content Accessibility Guidelines (WCAG) 2.1&lt;/a>
+at level AA.&lt;/p>
+&lt;p>On this site that means text that meets AA contrast in light and dark mode, a skip
+link, navigation that works from the keyboard, visible focus, and images described
+for screen readers.&lt;/p>
+&lt;p>In the app, narration can read any manuscript aloud, dictation lets you write by
+voice, and themes, including custom colours with a contrast warning, let you set
+the page the way you read best.&lt;/p></description></item><item><title>Download</title><link>https://writepad-app.netlify.app/download/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/download/</guid><description/></item><item><title>Message sent</title><link>https://writepad-app.netlify.app/contact/thanks/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/contact/thanks/</guid><description/></item><item><title>Pricing</title><link>https://writepad-app.netlify.app/pricing/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/pricing/</guid><description/></item><item><title>Privacy</title><link>https://writepad-app.netlify.app/privacy-policy/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/privacy-policy/</guid><description>&lt;p>The short version: your writing never comes to us. WRITEpad has no accounts, no
+analytics and no telemetry, and this website sets no cookies.&lt;/p>
+&lt;h2 id="the-app">The app&lt;/h2>
+&lt;p>WRITEpad works on a folder on your own computer. Your manuscripts, notes, versions,
+history and Library measurements stay in that folder, and we have no copy of them.&lt;/p>
+&lt;p>The app connects to the internet only when you ask it to:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Setting up narration&lt;/strong> downloads the Kokoro voice engine (from the Python Package
+Index) and its voice files (from GitHub).&lt;/li>
+&lt;li>&lt;strong>Dictation&lt;/strong> downloads a Whisper speech model the first time you use it. Speech is
+transcribed on your computer.&lt;/li>
+&lt;li>&lt;strong>Adding a script to the Library from a link&lt;/strong> fetches that page.&lt;/li>
+&lt;li>&lt;strong>Polish with Claude&lt;/strong> is off by default. If you turn it on, dictated text is sent to
+Anthropic with your own API key, under
+&lt;a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic&amp;rsquo;s privacy policy&lt;/a>.&lt;/li>
+&lt;li>&lt;strong>Agents&lt;/strong> you connect through the MCP server act under their own provider&amp;rsquo;s terms.&lt;/li>
+&lt;/ul>
+&lt;h2 id="this-website">This website&lt;/h2>
+&lt;p>This website sets no cookies. We count visits with Zero Trust Analytics (ztas.io). It sets no cookies, stores nothing on your device and does not store your IP address. For each page view it records the page, the site that sent you here, your browser, device type and operating system, an approximate location (country, region and city), and a one-way code that changes every day so a visit isn&amp;rsquo;t counted twice.&lt;/p></description></item><item><title>Terms of use</title><link>https://writepad-app.netlify.app/terms-of-use/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://writepad-app.netlify.app/terms-of-use/</guid><description>&lt;h2 id="the-software">The software&lt;/h2>
+&lt;p>WRITEpad is open-source software. Its source code is published on
+&lt;a href="https://github.com/jasonsutter87/writepad" target="_blank" rel="noopener">GitHub&lt;/a> under the license in that repository, which governs
+how you may use, copy, change and share the code.&lt;/p>
+&lt;p>The software is provided &lt;strong>as is&lt;/strong>, without warranty of any kind. Keep backups of
+work that matters to you; WRITEpad&amp;rsquo;s history feature and your own backups are the
+best protection against loss.&lt;/p>
+&lt;h2 id="your-writing">Your writing&lt;/h2>
+&lt;p>What you write with WRITEpad is yours. We claim no rights to it, and we never receive
+it. The same goes for every ebook and audiobook you export.&lt;/p></description></item></channel></rss>

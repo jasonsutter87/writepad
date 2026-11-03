@@ -34,13 +34,27 @@
     "@types/node": "^26.6.5",
     "autoprefixer": "^10.4.22",
     "concurrently": "^9.2.1",
-    "glob": "^13.0.0",
-    "postcss": "^8.5.6",
+    "glob": "^14.0.2",
+    "postcss": "^8.5.23",
     "postcss-cli": "^11.0.1",
     "sass": "^1.96.0",
     "tailwindcss": "^3.4.19"
   },
   "dependencies": {
     "@netlify/blobs": "^11.1.6"
+  },
+  "overrides": {
+    "shell-quote@^1": "^1.9.0",
+    "@isaacs/brace-expansion@^5": "^5.0.1",
+    "browserslist@^4": "^4.28.7",
+    "immutable@^5": "^5.1.8",
+    "minimatch@^10": "^11.0.1",
+    "nanoid@^3": "^3.3.18",
+    "picomatch@^2": "^2.3.2",
+    "picomatch@^4": "^4.0.4",
+    "source-map-js@^1": "^1.2.2",
+    "baseline-browser-mapping@^2": "^2.11.0",
+    "postcss-selector-parser@^6": "^6.1.5",
+    "yaml@^2": "^2.8.3"
   }
 }
