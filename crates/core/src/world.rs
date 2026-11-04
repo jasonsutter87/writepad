@@ -170,7 +170,7 @@ fn summary_of(body: &str) -> String {
 pub fn parse(rel: &str, text: &str) -> Entity {
     let (fm, body) = split_frontmatter(text);
     let props: Value = fm
-        .and_then(|y| serde_yaml::from_str::<serde_yaml::Value>(y).ok())
+        .and_then(|y| serde_norway::from_str::<serde_norway::Value>(y).ok())
         .and_then(|y| serde_json::to_value(y).ok())
         .filter(Value::is_object)
         .unwrap_or_else(|| json!({}));
