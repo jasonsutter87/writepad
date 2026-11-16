@@ -450,6 +450,9 @@ body.transcribing #btn-dictate { opacity: 0.7; cursor: progress; }
 .tip-head { font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .tip-meta { color: var(--muted); margin: 2px 0 4px; }
 .tip-body { font-family: var(--prose); font-size: 13px; line-height: 1.4; }
+.graph-tip.pinned { pointer-events: auto; }
+.tip-open { display: block; margin-top: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: inherit; cursor: pointer; }
+.tip-open:hover { border-color: var(--accent); color: var(--accent); }
 
 #timeline-view { padding: 24px 40px 80px; -webkit-user-select: text; user-select: text; }
 .timeline-head h2 { font: 600 22px var(--prose); margin: 0 0 4px; }

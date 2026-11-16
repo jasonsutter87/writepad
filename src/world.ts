@@ -150,7 +150,10 @@ export function renderGraph(root: HTMLElement, data: WorldGraph, h: GraphHandler
   const world = svgEl("g");
   svg.append(world);
   wrap.append(svg);
-  const applyTransform = () => world.setAttribute("transform", `translate(${view.tx},${view.ty}) scale(${view.scale})`);
+  const applyTransform = () => {
+    world.setAttribute("transform", `translate(${view.tx},${view.ty}) scale(${view.scale})`);
+    placePinned();
+  };
   if (!view.tx && !view.ty) {
     view.tx = width / 2;
     view.ty = height / 2;
@@ -191,19 +194,41 @@ export function renderGraph(root: HTMLElement, data: WorldGraph, h: GraphHandler
     const label = svgEl("text", { y: radius(n) + 13, class: "node-label" });
     label.textContent = n.kind === "scene" ? n.label.split(" · ").pop()! : n.label;
     g.append(label);
-    g.addEventListener("click", (e) => {
-      if ((e as MouseEvent).detail >= 0 && !dragged) h.open(n);
-    });
+    // Clicks are resolved in pointerup (pointer capture on the svg swallows node clicks).
     g.addEventListener("keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Enter") h.open(n);
+      const k = (e as KeyboardEvent).key;
+      if (k === "Enter") h.open(n);
+      else if (k === " ") {
+        e.preventDefault();
+        pin(n);
+      }
     });
     g.addEventListener("pointerenter", () => focus(n));
-    g.addEventListener("pointerleave", () => focus(null));
+    g.addEventListener("pointerleave", () => focus(pinned));
     nodeLayer.append(g);
     return g;
   });
 
+  // A single click pins the card (with an Open button); a double click, or the button, opens the entry.
+  let pinned: SimNode | null = null;
+  function pin(n: SimNode | null) {
+    pinned = n;
+    tip.classList.toggle("pinned", !!n);
+    focus(n);
+  }
+  function placePinned() {
+    if (!pinned) return;
+    tip.style.left = `${view.tx + (pinned.x ?? 0) * view.scale + 14}px`;
+    tip.style.top = `${view.ty + (pinned.y ?? 0) * view.scale + 14}px`;
+  }
+  const onKey = (e: KeyboardEvent) => {
+    if (!root.isConnected) return document.removeEventListener("keydown", onKey);
+    if (e.key === "Escape" && pinned) pin(null);
+  };
+  document.addEventListener("keydown", onKey);
+
   function focus(n: SimNode | null) {
+    if (!n && pinned) n = pinned;
     const near = n ? neighbors.get(n.id) ?? new Set() : null;
     nodes.forEach((m, i) => nodeEls[i].classList.toggle("dim", !!n && m.id !== n.id && !near!.has(m.id)));
     links.forEach((l, i) => {
@@ -228,6 +253,16 @@ export function renderGraph(root: HTMLElement, data: WorldGraph, h: GraphHandler
       p.className = "tip-body";
       p.textContent = n.summary.length > 160 ? `${n.summary.slice(0, 160)}…` : n.summary;
       tip.append(p);
+    }
+    if (n === pinned) {
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "tip-open";
+      open.textContent = `Open ${kindMeta(n.kind).label.toLowerCase()} →`;
+      const target = n;
+      open.onclick = () => h.open(target);
+      tip.append(open);
+      placePinned();
     }
     tip.hidden = false;
   }
@@ -263,6 +298,7 @@ export function renderGraph(root: HTMLElement, data: WorldGraph, h: GraphHandler
       }
     });
     nodes.forEach((n, i) => nodeEls[i].setAttribute("transform", `translate(${n.x},${n.y})`));
+    placePinned();
   });
   stopSim = () => sim.stop();
 
@@ -293,12 +329,27 @@ export function renderGraph(root: HTMLElement, data: WorldGraph, h: GraphHandler
       view.ty = e.clientY - panning.y;
       applyTransform();
     }
-    if (!tip.hidden) {
+    if (!tip.hidden && !pinned) {
       tip.style.left = `${e.offsetX + 14}px`;
       tip.style.top = `${e.offsetY + 14}px`;
     }
   });
-  const release = () => {
+  let lastClick = { id: "", t: 0 };
+  const release = (e: PointerEvent) => {
+    if (e.type === "pointerup" && !dragged) {
+      if (dragging) {
+        const now = performance.now();
+        if (lastClick.id === dragging.id && now - lastClick.t < 400) {
+          lastClick = { id: "", t: 0 };
+          h.open(dragging);
+        } else {
+          lastClick = { id: dragging.id, t: now };
+          pin(dragging);
+        }
+      } else if (panning) {
+        pin(null);
+      }
+    }
     if (dragging) {
       dragging.fx = null;
       dragging.fy = null;
